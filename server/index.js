@@ -6,7 +6,7 @@ app.use(cors());
 app.use(express.json());
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_FIT_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_FIT_CLIENT_SECRET;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
 app.post('/api/google-fit/token', async (req, res) => {
   const { code, redirect_uri } = req.body;

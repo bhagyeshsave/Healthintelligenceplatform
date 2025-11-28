@@ -20,7 +20,7 @@ The application is fully configured and running in the Replit environment with:
 ### Google Fit Integration (Rebuilt with Authorization Code Flow)
 - Rebuilt GoogleFitIntegration.tsx with secure Authorization Code flow
 - Added Express backend server (server/index.js) for secure token exchange
-- Uses GOOGLE_FIT_CLIENT_ID and GOOGLE_FIT_CLIENT_SECRET secrets
+- Uses GOOGLE_FIT_CLIENT_ID and GOOGLE_CLIENT_SECRET secrets
 - OAuth 2.0 Authorization Code flow with refresh token support
 - Backend endpoints:
   - POST /api/google-fit/token - Exchange auth code for access token
