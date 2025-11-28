@@ -40,31 +40,38 @@ const parseValue = (val: any): number => {
 };
 
 const extractDataForDate = (dayData: any): GoogleFitData => {
-  // Calculate sleep duration by summing details array duration_minutes
+  // Calculate sleep duration by summing details array duration_minutes/duration_hours
   let sleepMinutes = 0;
   let sleepQuality = 'Unknown';
-  
-  console.log('Raw sleep data:', JSON.stringify(dayData?.sleep, null, 2));
   
   if (dayData?.sleep && typeof dayData.sleep === 'object') {
     // Check if sleep contains an error string
     if (typeof dayData.sleep === 'string' && dayData.sleep.includes('Error')) {
       console.log('Sleep data contains error, skipping');
     } else {
-      // Try to sum duration_minutes from details array
+      // Try to sum duration_minutes or duration_hours from details array
       if (Array.isArray(dayData.sleep.details)) {
-        console.log('Found sleep.details array with', dayData.sleep.details.length, 'entries');
         sleepMinutes = dayData.sleep.details.reduce((sum: number, entry: any) => {
-          const mins = parseValue(entry.duration_minutes || entry.value || 0);
-          console.log('Sleep entry:', entry, 'duration_minutes:', mins);
+          let mins = 0;
+          // Try duration_minutes first, then duration_hours (convert to minutes)
+          if (entry.duration_minutes !== undefined) {
+            mins = parseValue(entry.duration_minutes);
+          } else if (entry.duration_hours !== undefined) {
+            mins = parseValue(entry.duration_hours) * 60;
+          } else {
+            mins = parseValue(entry.value || 0);
+          }
           return sum + mins;
         }, 0);
-      } else if (dayData.sleep.total_minutes) {
+      } else if (dayData.sleep.total_minutes !== undefined) {
         sleepMinutes = parseValue(dayData.sleep.total_minutes);
-        console.log('Using sleep.total_minutes:', sleepMinutes);
-      } else if (dayData.sleep.total) {
-        sleepMinutes = parseValue(dayData.sleep.total);
-        console.log('Using sleep.total:', sleepMinutes);
+      } else if (dayData.sleep.total !== undefined) {
+        // Check if unit is hours and convert to minutes
+        if (dayData.sleep.unit === 'hours') {
+          sleepMinutes = parseValue(dayData.sleep.total) * 60;
+        } else {
+          sleepMinutes = parseValue(dayData.sleep.total);
+        }
       }
       
       // Get quality from summary or directly
@@ -73,8 +80,6 @@ const extractDataForDate = (dayData: any): GoogleFitData => {
                      (sleepMinutes > 420 ? 'Good' : sleepMinutes > 300 ? 'Fair' : sleepMinutes > 0 ? 'Poor' : 'Unknown');
     }
   }
-  
-  console.log('Final sleep result - minutes:', sleepMinutes, 'quality:', sleepQuality);
   
   return {
     steps: parseValue(dayData?.steps?.total),
