@@ -44,23 +44,37 @@ const extractDataForDate = (dayData: any): GoogleFitData => {
   let sleepMinutes = 0;
   let sleepQuality = 'Unknown';
   
+  console.log('Raw sleep data:', JSON.stringify(dayData?.sleep, null, 2));
+  
   if (dayData?.sleep && typeof dayData.sleep === 'object') {
-    // Try to sum duration_minutes from details array
-    if (Array.isArray(dayData.sleep.details)) {
-      sleepMinutes = dayData.sleep.details.reduce((sum: number, entry: any) => {
-        return sum + parseValue(entry.duration_minutes || entry.value || 0);
-      }, 0);
-    } else if (dayData.sleep.total_minutes) {
-      sleepMinutes = parseValue(dayData.sleep.total_minutes);
-    } else if (dayData.sleep.total) {
-      sleepMinutes = parseValue(dayData.sleep.total);
+    // Check if sleep contains an error string
+    if (typeof dayData.sleep === 'string' && dayData.sleep.includes('Error')) {
+      console.log('Sleep data contains error, skipping');
+    } else {
+      // Try to sum duration_minutes from details array
+      if (Array.isArray(dayData.sleep.details)) {
+        console.log('Found sleep.details array with', dayData.sleep.details.length, 'entries');
+        sleepMinutes = dayData.sleep.details.reduce((sum: number, entry: any) => {
+          const mins = parseValue(entry.duration_minutes || entry.value || 0);
+          console.log('Sleep entry:', entry, 'duration_minutes:', mins);
+          return sum + mins;
+        }, 0);
+      } else if (dayData.sleep.total_minutes) {
+        sleepMinutes = parseValue(dayData.sleep.total_minutes);
+        console.log('Using sleep.total_minutes:', sleepMinutes);
+      } else if (dayData.sleep.total) {
+        sleepMinutes = parseValue(dayData.sleep.total);
+        console.log('Using sleep.total:', sleepMinutes);
+      }
+      
+      // Get quality from summary or directly
+      sleepQuality = dayData.sleep.summary?.overall_quality || 
+                     dayData.sleep.quality || 
+                     (sleepMinutes > 420 ? 'Good' : sleepMinutes > 300 ? 'Fair' : sleepMinutes > 0 ? 'Poor' : 'Unknown');
     }
-    
-    // Get quality from summary or directly
-    sleepQuality = dayData.sleep.summary?.overall_quality || 
-                   dayData.sleep.quality || 
-                   (sleepMinutes > 420 ? 'Good' : sleepMinutes > 300 ? 'Fair' : sleepMinutes > 0 ? 'Poor' : 'Unknown');
   }
+  
+  console.log('Final sleep result - minutes:', sleepMinutes, 'quality:', sleepQuality);
   
   return {
     steps: parseValue(dayData?.steps?.total),
@@ -149,7 +163,21 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
 
       const data = await response.json();
       
-      // Check if the API returned error strings in the data fields
+      // Check if API returned raw_data_status with 401 errors (token expired)
+      if (data.raw_data_status) {
+        const statusValues = Object.values(data.raw_data_status);
+        const hasAuthError = statusValues.some(
+          (val) => typeof val === 'string' && val.includes('401')
+        );
+        if (hasAuthError) {
+          console.log('Google Fit token expired (401 in raw_data_status), requesting re-auth');
+          handleDisconnect();
+          setError('Your Google Fit session has expired. Please reconnect.');
+          return;
+        }
+      }
+      
+      // Check if the API returned error strings in the data fields (legacy format)
       const allValues = Object.values(data).flatMap((dayData: any) => 
         typeof dayData === 'object' ? Object.values(dayData) : [dayData]
       );
@@ -161,6 +189,13 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         console.log('Google Fit token expired, clearing and requesting re-auth');
         handleDisconnect();
         setError('Your Google Fit session has expired. Please reconnect.');
+        return;
+      }
+      
+      // Check for "No data available" message with no valid dates
+      if (data.message === 'No data available' && !Object.keys(data).some(k => /^\d{4}-\d{2}-\d{2}$/.test(k))) {
+        console.log('No Google Fit data available');
+        setError('No data available from Google Fit. Please ensure you have fitness data in your account.');
         return;
       }
       
