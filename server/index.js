@@ -108,6 +108,12 @@ app.post('/api/google-fit/data', async (req, res) => {
   }
 
   try {
+    // Request 365 days of data by default
+    const requestBody = {
+      days: req.body.days || 365,
+      ...req.body,
+    };
+    
     const response = await fetch(
       'https://ombjteysx3.execute-api.us-east-1.amazonaws.com/prod/fetch',
       {
@@ -116,7 +122,7 @@ app.post('/api/google-fit/data', async (req, res) => {
           'Authorization': authHeader,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(req.body || {}),
+        body: JSON.stringify(requestBody),
       }
     );
 
