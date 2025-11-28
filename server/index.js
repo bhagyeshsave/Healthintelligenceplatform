@@ -100,6 +100,39 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.get('/api/google-fit/data', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Missing authorization header' });
+  }
+
+  try {
+    const response = await fetch(
+      'https://ombjteysx3.execute-api.us-east-1.amazonaws.com/prod/fetch',
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('External API error:', response.status, errorText);
+      return res.status(response.status).json({ error: errorText || 'API request failed' });
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch Google Fit data' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);

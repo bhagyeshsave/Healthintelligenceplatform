@@ -43,7 +43,7 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
 
     try {
       const response = await fetch(
-        'https://ombjteysx3.execute-api.us-east-1.amazonaws.com/prod/fetch',
+        `${BACKEND_URL}/api/google-fit/data`,
         {
           method: 'GET',
           headers: {
