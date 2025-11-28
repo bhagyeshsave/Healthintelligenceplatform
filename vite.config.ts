@@ -7,9 +7,14 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_GOOGLE_FIT_CLIENT_ID': JSON.stringify(process.env.GOOGLE_FIT_CLIENT_ID || ''),
   },
+  optimizeDeps: {
+    force: true,
+    include: ['@react-three/fiber', '@react-three/drei', 'three'],
+  },
   resolve: {
     extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
     alias: {
+      "@assets": path.resolve(__dirname, "./attached_assets"),
       "vaul@1.1.2": "vaul",
       "sonner@2.0.3": "sonner",
       "recharts@2.15.2": "recharts",
