@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
-import { Activity, Check, X, RefreshCw, AlertCircle, Heart, Footprints, Moon, Zap, TrendingUp, Calendar, Settings, Save } from 'lucide-react';
+import { Activity, Check, X, RefreshCw, AlertCircle, Heart, Footprints, Moon, Zap, TrendingUp, Calendar, Settings, Save, ExternalLink, AlertTriangle, Copy, CheckCircle } from 'lucide-react';
 
 interface GoogleFitData {
   steps: number;
@@ -28,12 +28,14 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
   const [googleFitData, setGoogleFitData] = useState<GoogleFitData | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Configuration state
   const [showConfig, setShowConfig] = useState(false);
+  const [showFullSetup, setShowFullSetup] = useState(false);
   const [clientId, setClientId] = useState('');
   const [isConfigured, setIsConfigured] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
 
-  // Check if already connected and configured on mount
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+
   useEffect(() => {
     const savedToken = localStorage.getItem('google_fit_access_token');
     const savedClientId = localStorage.getItem('google_fit_client_id');
@@ -50,7 +52,23 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
     }
   }, []);
 
-  // Save configuration
+  const handleCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(currentOrigin);
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = currentOrigin;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      textArea.remove();
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    }
+  };
+
   const handleSaveConfig = () => {
     if (!clientId.trim()) {
       setError('Please enter a valid Client ID');
@@ -60,10 +78,10 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
     localStorage.setItem('google_fit_client_id', clientId.trim());
     setIsConfigured(true);
     setShowConfig(false);
+    setShowFullSetup(false);
     setError(null);
   };
 
-  // Handle Google OAuth - Simplified
   const handleGoogleOAuth = async () => {
     if (!isConfigured || !clientId) {
       setError('Please configure your Google Client ID first');
@@ -74,9 +92,8 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
     setError(null);
 
     try {
-      // Configuration - MUST match Google Cloud Console exactly
       const GOOGLE_CLIENT_ID = clientId;
-      const REDIRECT_URI = window.location.origin; // No /profile suffix!
+      const REDIRECT_URI = currentOrigin;
       const SCOPES = [
         'https://www.googleapis.com/auth/fitness.activity.read',
         'https://www.googleapis.com/auth/fitness.heart_rate.read',
@@ -90,7 +107,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         `response_type=token&` +
         `scope=${encodeURIComponent(SCOPES)}`;
 
-      // Open OAuth popup
       const width = 500;
       const height = 600;
       const left = window.screen.width / 2 - width / 2;
@@ -106,7 +122,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         throw new Error('Popup blocked. Please allow popups for this site.');
       }
 
-      // Listen for OAuth callback
       const checkPopup = setInterval(() => {
         try {
           if (popup.location.hash) {
@@ -120,8 +135,7 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
               clearInterval(checkPopup);
             }
           }
-        } catch (e) {
-          // Cross-origin error - popup still on Google's domain
+        } catch {
         }
 
         if (popup.closed) {
@@ -130,7 +144,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         }
       }, 500);
 
-      // Timeout after 5 minutes
       setTimeout(() => {
         if (!popup.closed) {
           popup.close();
@@ -144,16 +157,13 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
     }
   };
 
-  // Handle OAuth callback with access token
   const handleOAuthCallback = async (token: string) => {
     try {
-      // Save token
       localStorage.setItem('google_fit_access_token', token);
       setAccessToken(token);
       setIsConnected(true);
       onConnectionChange?.(true);
 
-      // Fetch data
       await fetchGoogleFitData(token);
     } catch (err: any) {
       setError(err.message || 'Failed to connect Google Fit');
@@ -164,7 +174,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
     }
   };
 
-  // Fetch Google Fit data from your API
   const fetchGoogleFitData = async (token: string) => {
     setIsLoading(true);
     setError(null);
@@ -187,7 +196,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
 
       const data = await response.json();
       
-      // Transform API response to match our interface
       const transformedData: GoogleFitData = {
         steps: data.steps || 0,
         heartRate: data.heartRate || data.heart_rate || 0,
@@ -206,7 +214,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
       console.error('Google Fit fetch error:', err);
       setError(err.message || 'Failed to fetch Google Fit data');
       
-      // If token is invalid, disconnect
       if (err.message.includes('401') || err.message.includes('403')) {
         handleDisconnect();
       }
@@ -215,7 +222,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
     }
   };
 
-  // Disconnect Google Fit
   const handleDisconnect = () => {
     localStorage.removeItem('google_fit_access_token');
     setAccessToken(null);
@@ -225,7 +231,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
     onConnectionChange?.(false);
   };
 
-  // Reset configuration
   const handleResetConfig = () => {
     localStorage.removeItem('google_fit_client_id');
     localStorage.removeItem('google_fit_access_token');
@@ -237,7 +242,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
     setShowConfig(true);
   };
 
-  // Refresh data
   const handleRefresh = () => {
     if (accessToken) {
       fetchGoogleFitData(accessToken);
@@ -246,7 +250,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
 
   return (
     <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
-      {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-2xl shadow-lg">
@@ -300,7 +303,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         </div>
       </div>
 
-      {/* Error Message */}
       {error && (
         <div className="mb-4 p-3 bg-red-900/20 border border-red-700/50 rounded-lg flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
@@ -311,15 +313,115 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         </div>
       )}
 
-      {/* Configuration Form */}
       {(showConfig || !isConfigured) && !isConnected && (
         <div className="space-y-4">
+          <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-amber-300 text-sm font-medium">Important Notice</p>
+                <p className="text-amber-300/80 text-xs mt-1">
+                  Google Fit API is being deprecated. New signups closed May 2024. 
+                  If you already have access, you can continue using it until June 2025.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Settings className="w-4 h-4 text-blue-400" />
-              <h4 className="text-white text-sm font-medium">Google Cloud Configuration</h4>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-blue-400" />
+                <h4 className="text-white text-sm font-medium">Google Cloud Configuration</h4>
+              </div>
+              <Button
+                onClick={() => setShowFullSetup(!showFullSetup)}
+                variant="ghost"
+                className="h-7 px-3 text-cyan-400 hover:text-cyan-300 text-xs"
+              >
+                {showFullSetup ? 'Hide' : 'Show'} Full Setup Guide
+              </Button>
             </div>
             
+            {showFullSetup && (
+              <div className="mb-4 space-y-4">
+                <div className="bg-slate-900/50 border border-slate-700/30 rounded-lg p-4">
+                  <h5 className="text-cyan-300 text-sm font-medium mb-3 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-xs">1</span>
+                    Create Google Cloud Project
+                  </h5>
+                  <ol className="text-slate-400 text-xs space-y-2 ml-7">
+                    <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline inline-flex items-center gap-1">Google Cloud Console <ExternalLink className="w-3 h-3" /></a></li>
+                    <li>Create a new project or select existing one</li>
+                    <li>Enable "Fitness API" in APIs & Services → Library</li>
+                  </ol>
+                </div>
+
+                <div className="bg-slate-900/50 border border-slate-700/30 rounded-lg p-4">
+                  <h5 className="text-cyan-300 text-sm font-medium mb-3 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-xs">2</span>
+                    Configure OAuth Consent Screen
+                  </h5>
+                  <ol className="text-slate-400 text-xs space-y-2 ml-7">
+                    <li>Go to APIs & Services → <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline inline-flex items-center gap-1">OAuth consent screen <ExternalLink className="w-3 h-3" /></a></li>
+                    <li>Choose "External" user type → Click Create</li>
+                    <li>Fill in required fields:
+                      <ul className="ml-4 mt-1 space-y-1">
+                        <li>• App name: <span className="text-white">Thryve Health</span></li>
+                        <li>• User support email: <span className="text-white">Your email</span></li>
+                        <li>• Developer contact: <span className="text-white">Your email</span></li>
+                      </ul>
+                    </li>
+                    <li>Click "Save and Continue"</li>
+                    <li>On Scopes page, click "Add or Remove Scopes"</li>
+                    <li>Add these Fitness scopes:
+                      <ul className="ml-4 mt-1 space-y-1 text-xs">
+                        <li className="font-mono bg-slate-800 px-1 rounded">fitness.activity.read</li>
+                        <li className="font-mono bg-slate-800 px-1 rounded">fitness.heart_rate.read</li>
+                        <li className="font-mono bg-slate-800 px-1 rounded">fitness.sleep.read</li>
+                        <li className="font-mono bg-slate-800 px-1 rounded">fitness.location.read</li>
+                      </ul>
+                    </li>
+                    <li>Continue to "Test users" → Add your Google email</li>
+                    <li>Complete the setup</li>
+                  </ol>
+                </div>
+
+                <div className="bg-slate-900/50 border border-slate-700/30 rounded-lg p-4">
+                  <h5 className="text-cyan-300 text-sm font-medium mb-3 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-xs">3</span>
+                    Create OAuth 2.0 Client ID
+                  </h5>
+                  <ol className="text-slate-400 text-xs space-y-2 ml-7">
+                    <li>Go to APIs & Services → <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline inline-flex items-center gap-1">Credentials <ExternalLink className="w-3 h-3" /></a></li>
+                    <li>Click "Create Credentials" → "OAuth client ID"</li>
+                    <li>Application type: <span className="text-white">Web application</span></li>
+                    <li>Name: <span className="text-white">Thryve Health App</span></li>
+                    <li>
+                      <span className="text-white font-medium">Important:</span> Add this URL to both fields:
+                      <div className="mt-2 flex items-center gap-2">
+                        <code className="flex-1 bg-slate-800 text-cyan-300 px-3 py-2 rounded text-xs font-mono break-all">
+                          {currentOrigin}
+                        </code>
+                        <Button
+                          onClick={handleCopyUrl}
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-white flex-shrink-0"
+                        >
+                          {copiedUrl ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                      <ul className="ml-4 mt-2 space-y-1">
+                        <li>• Authorized JavaScript origins</li>
+                        <li>• Authorized redirect URIs</li>
+                      </ul>
+                    </li>
+                    <li>Click "Create" and copy the <span className="text-white">Client ID</span></li>
+                  </ol>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
               <div>
                 <label className="text-slate-300 text-sm block mb-2">
@@ -333,26 +435,29 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
                   className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
                 />
                 <p className="text-slate-500 text-xs mt-1">
-                  Get this from Google Cloud Console → Credentials
+                  Paste the Client ID from Google Cloud Console
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-blue-900/20 border border-blue-700/50 rounded-xl p-3">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-              <div className="text-xs space-y-1">
-                <p className="text-blue-300 font-medium">Setup Instructions:</p>
-                <ol className="text-blue-300/80 space-y-1 list-decimal list-inside">
-                  <li>Go to Google Cloud Console → APIs & Services → Credentials</li>
-                  <li>Create OAuth 2.0 Client ID (Web application)</li>
-                  <li>Add <code className="bg-blue-500/20 px-1 rounded">{window.location.origin}</code> to both JavaScript origins and Redirect URIs</li>
-                  <li>Copy the Client ID and paste it above</li>
-                </ol>
+          {!showFullSetup && (
+            <div className="bg-blue-900/20 border border-blue-700/50 rounded-xl p-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="text-xs space-y-1">
+                  <p className="text-blue-300 font-medium">Quick Setup Summary:</p>
+                  <ol className="text-blue-300/80 space-y-1 list-decimal list-inside">
+                    <li>Configure OAuth consent screen in Google Cloud Console</li>
+                    <li>Create OAuth 2.0 Client ID (Web application)</li>
+                    <li>Add <code className="bg-blue-500/20 px-1 rounded">{currentOrigin}</code> to authorized origins & redirect URIs</li>
+                    <li>Paste Client ID above</li>
+                  </ol>
+                  <p className="text-blue-300/60 mt-2">Click "Show Full Setup Guide" for detailed instructions</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <Button
             onClick={handleSaveConfig}
@@ -365,7 +470,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         </div>
       )}
 
-      {/* Not Connected State (After Configuration) */}
       {!isConnected && isConfigured && !showConfig && (
         <div className="space-y-4">
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
@@ -424,10 +528,8 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         </div>
       )}
 
-      {/* Connected State - Display Data */}
       {isConnected && googleFitData && (
         <div className="space-y-4">
-          {/* Main Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-slate-800/50 border border-slate-700/30 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
@@ -478,7 +580,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
             </div>
           </div>
 
-          {/* Additional Stats */}
           <div className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -496,7 +597,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
             </div>
           </div>
 
-          {/* Last Sync Info */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-slate-500">
               <Calendar className="w-3 h-3" />
@@ -516,7 +616,6 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         </div>
       )}
 
-      {/* Loading State */}
       {isLoading && !googleFitData && isConnected && (
         <div className="flex flex-col items-center justify-center py-8">
           <RefreshCw className="w-8 h-8 text-emerald-400 animate-spin mb-3" />

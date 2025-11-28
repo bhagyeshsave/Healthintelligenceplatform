@@ -17,6 +17,16 @@ The application is fully configured and running in the Replit environment with:
 - ✅ Deployment configured
 
 ## Recent Changes (November 28, 2025)
+### Google Fit Integration Updates
+- Updated GoogleFitIntegration.tsx with comprehensive OAuth consent screen setup guide
+- Added deprecation warning: Google Fit API closed to new signups May 2024, shutdown June 2025
+- Added step-by-step setup instructions including:
+  - Creating Google Cloud project and enabling Fitness API
+  - Configuring OAuth consent screen with required scopes
+  - Creating OAuth 2.0 Client ID with correct redirect URIs
+- Added copy-to-clipboard button for redirect URI
+- Improved UI with collapsible full setup guide
+
 ### Custom Themed Alert Dialogs
 - Replaced all browser alert() calls with custom app-themed dialog boxes
 - Created AppAlert component (src/components/ui/app-alert.tsx) with 4 alert types:
