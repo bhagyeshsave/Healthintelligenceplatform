@@ -69,19 +69,28 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
       const data = await response.json();
       
       // Check if the API returned error strings in the data fields
-      const hasAuthError = Object.values(data).some(
+      const allValues = Object.values(data).flatMap((dayData: any) => 
+        typeof dayData === 'object' ? Object.values(dayData) : [dayData]
+      );
+      const hasAuthError = allValues.some(
         (val) => typeof val === 'string' && val.includes('Error:') && val.includes('401')
       );
       
       if (hasAuthError) {
-        // Token is invalid - need to re-authenticate
         console.log('Google Fit token expired, clearing and requesting re-auth');
         handleDisconnect();
         setError('Your Google Fit session has expired. Please reconnect.');
         return;
       }
       
-      // Parse numeric values safely (handle both numbers and strings)
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // Get today's data from the response (data is organized by date)
+      const todayData = data[todayStr] || {};
+      
+      // Parse numeric values safely
       const parseValue = (val: any): number => {
         if (typeof val === 'number') return val;
         if (typeof val === 'string' && !val.includes('Error')) {
@@ -91,19 +100,21 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         return 0;
       };
       
+      // Extract totals from today's data structure
       const transformedData: GoogleFitData = {
-        steps: parseValue(data.steps),
-        heartRate: parseValue(data.heartRate || data.heart_rate),
-        calories: parseValue(data.calories),
-        distance: parseValue(data.distance),
-        activeMinutes: parseValue(data.activeMinutes || data.active_minutes || data.move_minutes),
+        steps: parseValue(todayData.steps?.total),
+        heartRate: parseValue(todayData.heart_rate?.total || todayData.heartRate?.total),
+        calories: Math.round(parseValue(todayData.calories?.total)),
+        distance: Math.round(parseValue(todayData.distance?.total)),
+        activeMinutes: parseValue(todayData.move_minutes?.total || todayData.activeMinutes?.total),
         sleep: {
-          duration: typeof data.sleep === 'object' ? (data.sleep?.duration || 0) : 0,
-          quality: typeof data.sleep === 'object' ? (data.sleep?.quality || 'Unknown') : 'Unknown',
+          duration: typeof todayData.sleep === 'object' ? parseValue(todayData.sleep?.total || todayData.sleep?.duration) : 0,
+          quality: typeof todayData.sleep === 'object' ? (todayData.sleep?.quality || 'Unknown') : 'Unknown',
         },
         lastSync: new Date().toISOString(),
       };
 
+      console.log('Today\'s Google Fit data:', todayStr, transformedData);
       setGoogleFitData(transformedData);
     } catch (err: any) {
       console.error('Google Fit fetch error:', err);
