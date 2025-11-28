@@ -17,6 +17,13 @@ The application is fully configured and running in the Replit environment with:
 - ✅ Deployment configured
 
 ## Recent Changes (November 28, 2025)
+### Location Capture Feature
+- Added location capture ability to the Profile page
+- Uses browser's Geolocation API for GPS coordinates
+- Integrates with OpenStreetMap Nominatim for address lookup
+- Displays current location with coordinates and timestamp
+- Includes error handling for permission denied/unavailable scenarios
+
 ### Project Setup for Replit
 - Created TypeScript configuration files (tsconfig.json, tsconfig.node.json)
 - Installed Node.js 20 and all dependencies
@@ -24,6 +31,7 @@ The application is fully configured and running in the Replit environment with:
   - Changed port from 3000 to 5000
   - Set host to 0.0.0.0 for Replit proxy compatibility
   - Configured HMR with clientPort 443
+  - Added allowedHosts: true for proxy support
 - Created .gitignore for Node.js project
 - Configured workflow "Frontend Development Server" on port 5000
 - Set up deployment configuration using autoscale with build and preview commands

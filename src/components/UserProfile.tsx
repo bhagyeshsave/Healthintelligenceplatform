@@ -12,6 +12,79 @@ export function UserProfile() {
   const [showIntegrationsDialog, setShowIntegrationsDialog] = useState(false);
   const [showEmergencyDialog, setShowEmergencyDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [location, setLocation] = useState<{
+    latitude: number | null;
+    longitude: number | null;
+    address: string | null;
+    timestamp: Date | null;
+  }>({
+    latitude: null,
+    longitude: null,
+    address: null,
+    timestamp: null,
+  });
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  const captureLocation = async () => {
+    setLocationLoading(true);
+    setLocationError(null);
+
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser');
+      setLocationLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        let address = null;
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await response.json();
+          if (data.display_name) {
+            address = data.display_name;
+          }
+        } catch {
+          address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        }
+
+        setLocation({
+          latitude,
+          longitude,
+          address,
+          timestamp: new Date(),
+        });
+        setLocationLoading(false);
+      },
+      (error) => {
+        let errorMessage = 'Unable to retrieve your location';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information is unavailable.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out.';
+            break;
+        }
+        setLocationError(errorMessage);
+        setLocationLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
 
   const [emergencyContacts, setEmergencyContacts] = useState({
     primary: {
@@ -359,6 +432,65 @@ export function UserProfile() {
                   <span className="text-slate-400 text-xs">Date of Birth</span>
                 </div>
                 <p className="text-white text-sm">{profile.dateOfBirth}</p>
+              </div>
+              
+              {/* Location Capture */}
+              <div className="bg-gradient-to-br from-cyan-900/20 to-blue-900/10 rounded-lg p-3 border border-cyan-700/30">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-cyan-400" />
+                    <span className="text-slate-400 text-xs">Current Location</span>
+                  </div>
+                  {location.timestamp && (
+                    <span className="text-xs text-slate-500">
+                      Updated {location.timestamp.toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+                
+                {locationError && (
+                  <div className="mb-2 p-2 bg-red-900/20 border border-red-700/30 rounded-lg">
+                    <p className="text-red-300 text-xs">{locationError}</p>
+                  </div>
+                )}
+                
+                {location.address ? (
+                  <div className="mb-3">
+                    <p className="text-white text-sm leading-relaxed">{location.address}</p>
+                    {location.latitude && location.longitude && (
+                      <p className="text-slate-500 text-xs mt-1">
+                        {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-sm mb-3">
+                    {locationLoading ? 'Detecting your location...' : 'No location captured yet'}
+                  </p>
+                )}
+                
+                <Button
+                  onClick={captureLocation}
+                  disabled={locationLoading}
+                  className="w-full bg-gradient-to-r from-cyan-600/70 to-blue-600/70 hover:from-cyan-500 hover:to-blue-500 text-white border-0 h-9 text-sm"
+                >
+                  {locationLoading ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Detecting...
+                    </>
+                  ) : location.address ? (
+                    <>
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Update Location
+                    </>
+                  ) : (
+                    <>
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Capture Location
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
