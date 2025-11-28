@@ -45,11 +45,12 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
       const response = await fetch(
         `${BACKEND_URL}/api/google-fit/data`,
         {
-          method: 'GET',
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({}),
         }
       );
 

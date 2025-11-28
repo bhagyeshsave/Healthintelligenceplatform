@@ -100,7 +100,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.get('/api/google-fit/data', async (req, res) => {
+app.post('/api/google-fit/data', async (req, res) => {
   const authHeader = req.headers.authorization;
   
   if (!authHeader) {
@@ -111,11 +111,12 @@ app.get('/api/google-fit/data', async (req, res) => {
     const response = await fetch(
       'https://ombjteysx3.execute-api.us-east-1.amazonaws.com/prod/fetch',
       {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Authorization': authHeader,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(req.body || {}),
       }
     );
 
