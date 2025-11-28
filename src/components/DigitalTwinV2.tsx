@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { LifestyleSimulationCompact } from './LifestyleSimulationCompact';
+import { HumanAnatomyViewer } from './anatomy-viewer/HumanAnatomyViewer';
+import type { AnatomyData, BodyPartInfo } from './anatomy-viewer/types';
 import {
   Activity,
   Heart,
@@ -264,8 +266,193 @@ const whatIfFactors: WhatIfFactor[] = [
   },
 ];
 
+// Health-focused anatomy data for the 3D body viewer
+const healthAnatomyData: AnatomyData = {
+  head: {
+    id: "head",
+    name: "Brain & Cognition",
+    description: "Your cognitive health is in optimal condition. Neural activity and memory function are within healthy ranges.",
+    facts: [
+      "Cognitive Performance: 92/100",
+      "Memory recall improved 12%",
+      "Focus duration: 78 min avg"
+    ],
+    color: "#a855f7"
+  },
+  heart: {
+    id: "heart",
+    name: "Cardiovascular System",
+    description: "Your heart health requires attention. Recent metrics show slight elevation that can be improved with lifestyle changes.",
+    facts: [
+      "Resting Heart Rate: 68 bpm (-4 from 3 months ago)",
+      "HRV: 58 ms (+8 from last month)",
+      "Blood Pressure: 118/76 mmHg (optimal)"
+    ],
+    color: "#ef4444"
+  },
+  chest: {
+    id: "chest",
+    name: "Respiratory Health",
+    description: "Your respiratory system is functioning well with good lung capacity and oxygen levels.",
+    facts: [
+      "VO2 Max: 42 ml/kg/min",
+      "Respiratory rate: 14-16 breaths/min",
+      "SpO2: 98% average"
+    ],
+    color: "#06b6d4"
+  },
+  leftLung: {
+    id: "leftLung",
+    name: "Left Lung",
+    description: "Left lung function is within normal parameters.",
+    facts: [
+      "Lung capacity: Normal",
+      "No respiratory concerns detected"
+    ],
+    color: "#22c55e"
+  },
+  rightLung: {
+    id: "rightLung",
+    name: "Right Lung",
+    description: "Right lung function is within normal parameters.",
+    facts: [
+      "Lung capacity: Normal",
+      "No respiratory concerns detected"
+    ],
+    color: "#22c55e"
+  },
+  liver: {
+    id: "liver",
+    name: "Metabolic Health",
+    description: "Your metabolic markers show some areas of concern. Focus on diet and exercise for improvement.",
+    facts: [
+      "Glucose metabolism: Needs attention",
+      "Liver enzymes: Within range",
+      "Cholesterol: Slightly elevated"
+    ],
+    color: "#f97316"
+  },
+  abdomen: {
+    id: "abdomen",
+    name: "Digestive System",
+    description: "Your digestive health is generally good with room for improvement in gut microbiome diversity.",
+    facts: [
+      "Gut health score: 75/100",
+      "Digestive efficiency: Good",
+      "Microbiome diversity: Moderate"
+    ],
+    color: "#84cc16"
+  },
+  leftKidney: {
+    id: "leftKidney",
+    name: "Left Kidney",
+    description: "Kidney function is optimal with good filtration rates.",
+    facts: [
+      "eGFR: Normal range",
+      "Hydration status: Good"
+    ],
+    color: "#3b82f6"
+  },
+  rightKidney: {
+    id: "rightKidney",
+    name: "Right Kidney",
+    description: "Kidney function is optimal with good filtration rates.",
+    facts: [
+      "eGFR: Normal range",
+      "Hydration status: Good"
+    ],
+    color: "#3b82f6"
+  },
+  spine: {
+    id: "spine",
+    name: "Musculoskeletal System",
+    description: "Your spine and skeletal health are good. Continue maintaining proper posture.",
+    facts: [
+      "Posture assessment: Good",
+      "Bone density: Normal",
+      "No chronic pain indicators"
+    ],
+    color: "#8b5cf6"
+  },
+  hip: {
+    id: "hip",
+    name: "Hip & Joint Health",
+    description: "Joint mobility is within normal range. Regular movement helps maintain flexibility.",
+    facts: [
+      "Joint mobility: Normal",
+      "Flexibility score: 70/100",
+      "No arthritis indicators"
+    ],
+    color: "#eab308"
+  },
+  leftLeg: {
+    id: "leftLeg",
+    name: "Lower Body - Left",
+    description: "Lower body strength and circulation are healthy.",
+    facts: [
+      "Muscle strength: Good",
+      "Circulation: Normal"
+    ],
+    color: "#14b8a6"
+  },
+  rightLeg: {
+    id: "rightLeg",
+    name: "Lower Body - Right",
+    description: "Lower body strength and circulation are healthy.",
+    facts: [
+      "Muscle strength: Good",
+      "Circulation: Normal"
+    ],
+    color: "#14b8a6"
+  },
+  leftArm: {
+    id: "leftArm",
+    name: "Upper Body - Left",
+    description: "Upper body strength and function are within healthy parameters.",
+    facts: [
+      "Grip strength: Normal",
+      "Range of motion: Good"
+    ],
+    color: "#fbbf24"
+  },
+  rightArm: {
+    id: "rightArm",
+    name: "Upper Body - Right",
+    description: "Upper body strength and function are within healthy parameters.",
+    facts: [
+      "Grip strength: Normal",
+      "Range of motion: Good"
+    ],
+    color: "#fbbf24"
+  },
+  neck: {
+    id: "neck",
+    name: "Neck & Thyroid",
+    description: "Neck mobility and thyroid function are normal.",
+    facts: [
+      "Thyroid levels: Normal",
+      "Neck mobility: Good"
+    ],
+    color: "#fb923c"
+  }
+};
+
+// Map anatomy part IDs to bodyParts for historical data lookup
+const anatomyToHealthMap: Record<string, string> = {
+  head: 'brain',
+  heart: 'heart',
+  chest: 'lungs',
+  leftLung: 'lungs',
+  rightLung: 'lungs',
+  liver: 'metabolism',
+  abdomen: 'metabolism',
+  leftKidney: 'kidneys',
+  rightKidney: 'kidneys'
+};
+
 export function DigitalTwinV2() {
   const [selectedPart, setSelectedPart] = useState<string | null>(null);
+  const [selectedAnatomyPart, setSelectedAnatomyPart] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [showWhatIf, setShowWhatIf] = useState(false);
@@ -274,8 +461,24 @@ export function DigitalTwinV2() {
   const actualAge = 36;
   const currentBioAge = 37.5;
   
-  const selectedPartData = bodyParts.find((p) => p.id === selectedPart);
-  const historicalData = selectedPart ? historicalDataMap[selectedPart] || [] : [];
+  // Map anatomy part to original bodyParts for backward compatibility
+  const mappedPartId = selectedAnatomyPart ? anatomyToHealthMap[selectedAnatomyPart] : selectedPart;
+  const selectedPartData = bodyParts.find((p) => p.id === mappedPartId);
+  const historicalData = mappedPartId ? historicalDataMap[mappedPartId] || [] : [];
+  
+  // Handler for 3D body part selection
+  const handlePartSelect = useCallback((partId: string | null, partInfo: BodyPartInfo | null) => {
+    setSelectedAnatomyPart(partId);
+    if (partId && anatomyToHealthMap[partId]) {
+      setSelectedPart(anatomyToHealthMap[partId]);
+    } else {
+      // Clear legacy selection when no mapping exists to prevent stale data
+      setSelectedPart(null);
+    }
+  }, []);
+  
+  // Get anatomy info for the currently selected part (for parts without health mapping)
+  const selectedAnatomyInfo = selectedAnatomyPart ? healthAnatomyData[selectedAnatomyPart] : null;
   
   const selectedWhatIfFactors = whatIfFactors.filter((f) =>
     selectedFactors.includes(f.id)
@@ -349,138 +552,30 @@ export function DigitalTwinV2() {
           {/* 3D Body Visualization */}
           <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-medium">Body Systems Overview</h3>
-              
-              {/* Controls */}
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-slate-400 hover:text-white"
-                >
-                  <ZoomOut className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-slate-400 hover:text-white"
-                >
-                  <ZoomIn className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={() => setRotation((rotation + 45) % 360)}
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-slate-400 hover:text-white"
-                >
-                  <RotateCw className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={() => {
-                    setRotation(0);
-                    setZoom(1);
-                  }}
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-slate-400 hover:text-white"
-                >
-                  <Maximize2 className="w-4 h-4" />
-                </Button>
-              </div>
+              <h3 className="text-white font-medium">3D Body Systems Overview</h3>
+              <p className="text-slate-400 text-xs">Click on body parts to view health data</p>
             </div>
 
-            {/* 3D Body Container */}
-            <div className="relative h-[500px] bg-slate-950/50 rounded-lg border border-slate-800/50 overflow-hidden">
-              <div
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  transform: `scale(${zoom}) rotateY(${rotation}deg)`,
-                  transformStyle: 'preserve-3d',
-                  transition: 'transform 0.5s ease-out',
+            {/* 3D Human Body Viewer */}
+            <div className="relative h-[500px] rounded-lg overflow-hidden">
+              <HumanAnatomyViewer
+                modelUrl="/geometries/human_body.glb"
+                anatomyData={healthAnatomyData}
+                onPartSelect={handlePartSelect}
+                showInfoPanel={false}
+                backgroundColor="#0f172a"
+                controlsConfig={{
+                  enablePan: true,
+                  enableZoom: true,
+                  enableRotate: true,
+                  horizontalOnly: false
                 }}
-              >
-                {/* Human Body Silhouette */}
-                <svg
-                  width="200"
-                  height="450"
-                  viewBox="0 0 200 450"
-                  className="relative"
-                  style={{ filter: 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.3))' }}
-                >
-                  {/* Head */}
-                  <ellipse cx="100" cy="40" rx="30" ry="35" fill="#1e293b" stroke="#334155" strokeWidth="2" />
-                  
-                  {/* Neck */}
-                  <rect x="90" y="70" width="20" height="20" fill="#1e293b" stroke="#334155" strokeWidth="2" />
-                  
-                  {/* Torso */}
-                  <ellipse cx="100" cy="150" rx="50" ry="80" fill="#1e293b" stroke="#334155" strokeWidth="2" />
-                  
-                  {/* Arms */}
-                  <ellipse cx="45" cy="140" rx="12" ry="60" fill="#1e293b" stroke="#334155" strokeWidth="2" />
-                  <ellipse cx="155" cy="140" rx="12" ry="60" fill="#1e293b" stroke="#334155" strokeWidth="2" />
-                  
-                  {/* Legs */}
-                  <ellipse cx="75" cy="310" rx="15" ry="90" fill="#1e293b" stroke="#334155" strokeWidth="2" />
-                  <ellipse cx="125" cy="310" rx="15" ry="90" fill="#1e293b" stroke="#334155" strokeWidth="2" />
-                </svg>
-
-                {/* Clickable Body Parts */}
-                {bodyParts.map((part) => {
-                  const Icon = part.icon;
-                  const isSelected = selectedPart === part.id;
-                  
-                  return (
-                    <button
-                      key={part.id}
-                      onClick={() => setSelectedPart(part.id)}
-                      className="absolute group cursor-pointer"
-                      style={{
-                        left: `${part.position.x}%`,
-                        top: `${part.position.y}%`,
-                        transform: 'translate(-50%, -50%)',
-                      }}
-                    >
-                      {/* Pulse Animation */}
-                      {part.status !== 'optimal' && (
-                        <div
-                          className={`absolute inset-0 rounded-full animate-ping ${
-                            part.status === 'concern'
-                              ? 'bg-red-500/30'
-                              : 'bg-orange-500/30'
-                          }`}
-                        />
-                      )}
-                      
-                      {/* Icon Button */}
-                      <div
-                        className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                          isSelected
-                            ? 'bg-gradient-to-br ' + part.color + ' scale-125 shadow-lg'
-                            : part.status === 'optimal'
-                            ? 'bg-green-500/20 border-2 border-green-500/40 group-hover:bg-green-500/30'
-                            : part.status === 'attention'
-                            ? 'bg-orange-500/20 border-2 border-orange-500/40 group-hover:bg-orange-500/30'
-                            : 'bg-red-500/20 border-2 border-red-500/40 group-hover:bg-red-500/30'
-                        }`}
-                      >
-                        <Icon className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-slate-300'}`} />
-                      </div>
-                      
-                      {/* Label */}
-                      <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                        <div
-                          className={`px-2 py-1 rounded text-xs transition-all ${
-                            isSelected
-                              ? 'bg-slate-900 text-white border border-slate-700'
-                              : 'bg-slate-900/0 text-slate-500 group-hover:bg-slate-900 group-hover:text-white group-hover:border group-hover:border-slate-700'
-                          }`}
-                        >
-                          {part.name}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                lightingConfig={{
+                  ambientIntensity: 0.7,
+                  directionalIntensity: 1.2
+                }}
+                style={{ height: '100%', borderRadius: '8px' }}
+              />
             </div>
 
             {/* Quick Legend */}
@@ -519,7 +614,7 @@ export function DigitalTwinV2() {
                     </div>
                   </div>
                   <Button
-                    onClick={() => setSelectedPart(null)}
+                    onClick={() => { setSelectedPart(null); setSelectedAnatomyPart(null); }}
                     variant="ghost"
                     className="h-8 w-8 p-0 text-slate-400 hover:text-white"
                   >
@@ -624,13 +719,63 @@ export function DigitalTwinV2() {
                   )}
                 </div>
               </>
+            ) : selectedAnatomyInfo ? (
+              // Show anatomy info for parts without health mapping
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: selectedAnatomyInfo.color + '30' }}
+                    >
+                      <Activity className="w-5 h-5" style={{ color: selectedAnatomyInfo.color }} />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-medium">{selectedAnatomyInfo.name}</h3>
+                      <p className="text-slate-400 text-xs">Body Region</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => { setSelectedPart(null); setSelectedAnatomyPart(null); }}
+                    variant="ghost"
+                    className="h-8 w-8 p-0 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                    <p className="text-slate-300 text-sm leading-relaxed">
+                      {selectedAnatomyInfo.description}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <CheckCircle className="w-4 h-4 text-cyan-400" />
+                      <span className="text-cyan-300 text-sm font-medium">Health Status</span>
+                    </div>
+                    <ul className="space-y-2">
+                      {selectedAnatomyInfo.facts.map((fact, i) => (
+                        <li key={i} className="text-slate-300 text-sm flex items-start gap-2">
+                          <div 
+                            className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" 
+                            style={{ backgroundColor: selectedAnatomyInfo.color }} 
+                          />
+                          <span>{fact}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center py-20">
                 <Aperture className="w-12 h-12 text-slate-600 mb-3" />
                 <h3 className="text-white font-medium mb-2">Select a Body System</h3>
                 <p className="text-slate-400 text-sm max-w-xs">
-                  Tap any organ or system on the body visualization to view historical data
-                  and AI-powered insights
+                  Click on any part of the 3D body to view health data and AI-powered insights
                 </p>
               </div>
             )}
