@@ -6,12 +6,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { GoogleFitIntegration } from './GoogleFitIntegration';
+import { AppAlert } from './ui/app-alert';
 
 export function UserProfile() {
   const [showQR, setShowQR] = useState(false);
   const [showIntegrationsDialog, setShowIntegrationsDialog] = useState(false);
   const [showEmergencyDialog, setShowEmergencyDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'warning' | 'info' | 'emergency';
+  }>({ open: false, title: '', message: '', type: 'info' });
+
+  const showAppAlert = (title: string, message: string, type: 'success' | 'warning' | 'info' | 'emergency' = 'info') => {
+    setAlertDialog({ open: true, title, message, type });
+  };
   
   const [location, setLocation] = useState<{
     latitude: number | null;
@@ -636,8 +648,11 @@ export function UserProfile() {
             <Button 
               className="bg-gradient-to-r from-blue-600/80 to-cyan-600/80 hover:from-blue-600 hover:to-cyan-600 text-white border-0 h-11 shadow-lg shadow-blue-900/20"
               onClick={() => {
-                // SOS trigger logic
-                alert('Emergency Alert Triggered!\n\n✓ Emergency contacts notified\n✓ Location shared\n✓ Health summary sent');
+                showAppAlert(
+                  'Emergency Alert Triggered!',
+                  '✓ Emergency contacts notified\n✓ Location shared\n✓ Health summary sent',
+                  'emergency'
+                );
               }}
             >
               <AlertTriangle className="w-4 h-4 mr-2" />
@@ -647,8 +662,11 @@ export function UserProfile() {
             <Button 
               className="bg-slate-700/50 hover:bg-slate-600/50 text-white border border-slate-600/50 h-11"
               onClick={() => {
-                // Test SOS
-                alert('Test Alert Sent!\n\nYour emergency contacts will receive a test message.');
+                showAppAlert(
+                  'Test Alert Sent!',
+                  'Your emergency contacts will receive a test message.',
+                  'info'
+                );
               }}
             >
               <Bell className="w-4 h-4 mr-2" />
@@ -741,9 +759,12 @@ export function UserProfile() {
                 </Button>
                 <Button
                   onClick={() => {
-                    // Save logic here
                     setShowEmergencyDialog(false);
-                    alert('Emergency contacts updated successfully!');
+                    showAppAlert(
+                      'Contacts Updated',
+                      'Emergency contacts updated successfully!',
+                      'success'
+                    );
                   }}
                   className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white border-0"
                 >
@@ -1087,6 +1108,14 @@ export function UserProfile() {
           </div>
         </div>
       </div>
+
+      <AppAlert
+        open={alertDialog.open}
+        onClose={() => setAlertDialog(prev => ({ ...prev, open: false }))}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
+import { AppAlert } from './ui/app-alert';
 import {
   Sparkles,
   Mic,
@@ -137,6 +138,17 @@ export function DailyLog() {
   const [quickLogInputMode, setQuickLogInputMode] = useState<'manual' | 'voice' | null>(null);
   const [logDateTime, setLogDateTime] = useState(new Date().toISOString().slice(0, 16));
   const [quickLogDateTime, setQuickLogDateTime] = useState(new Date().toISOString().slice(0, 16));
+  
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'warning' | 'info' | 'emergency';
+  }>({ open: false, title: '', message: '', type: 'info' });
+
+  const showAppAlert = (title: string, message: string, type: 'success' | 'warning' | 'info' | 'emergency' = 'info') => {
+    setAlertDialog({ open: true, title, message, type });
+  };
 
   const getLogIcon = (type: string) => {
     switch (type) {
@@ -347,8 +359,7 @@ export function DailyLog() {
     setShowQuickLog(null);
     setQuickLogInputMode(null);
     
-    // Show success message
-    alert(`${getQuickLogTitle(showQuickLog || '')} saved successfully!`);
+    showAppAlert('Log Saved', `${getQuickLogTitle(showQuickLog || '')} saved successfully!`, 'success');
   };
 
   // Custom Tooltip Components
@@ -880,6 +891,14 @@ export function DailyLog() {
           </div>
         </div>
       )}
+
+      <AppAlert
+        open={alertDialog.open}
+        onClose={() => setAlertDialog(prev => ({ ...prev, open: false }))}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }

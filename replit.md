@@ -17,6 +17,16 @@ The application is fully configured and running in the Replit environment with:
 - ✅ Deployment configured
 
 ## Recent Changes (November 28, 2025)
+### Custom Themed Alert Dialogs
+- Replaced all browser alert() calls with custom app-themed dialog boxes
+- Created AppAlert component (src/components/ui/app-alert.tsx) with 4 alert types:
+  - **success** (emerald/teal gradient) - For confirmations like "Contacts Updated"
+  - **warning** (amber/orange gradient) - For warnings and cautions
+  - **info** (cyan/blue gradient) - For informational messages
+  - **emergency** (red/pink gradient) - For emergency alerts (SOS)
+- Dialogs feature glassmorphism effects matching the app's dark theme
+- Updated UserProfile.tsx, HealthRecords.tsx, and DailyLog.tsx to use custom dialogs
+
 ### Location Capture Feature
 - Added location capture ability to the Profile page
 - Uses browser's Geolocation API for GPS coordinates

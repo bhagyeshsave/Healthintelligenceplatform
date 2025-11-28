@@ -7,6 +7,7 @@ import { Badge } from './ui/badge';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import Slider from 'react-slick';
 import { DailyLog } from './DailyLog';
+import { AppAlert } from './ui/app-alert';
 
 // Today's Vitals from Wearables/Devices (Real-time data)
 const todaysVitalsData = [
@@ -275,6 +276,17 @@ export function HealthRecords() {
   const [aiSummary, setAiSummary] = useState('');
   const [summaryGenerated, setSummaryGenerated] = useState(false);
   const [selectedVitals, setSelectedVitals] = useState<string[]>(['cbc', 'bp', 'sugar']);
+  
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'warning' | 'info' | 'emergency';
+  }>({ open: false, title: '', message: '', type: 'info' });
+
+  const showAppAlert = (title: string, message: string, type: 'success' | 'warning' | 'info' | 'emergency' = 'info') => {
+    setAlertDialog({ open: true, title, message, type });
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -381,8 +393,11 @@ export function HealthRecords() {
   };
 
   const handleExportSummary = () => {
-    // Export summary report
-    alert('Summary PDF export would be generated here with trend analysis, insights, and recommendations');
+    showAppAlert(
+      'PDF Export',
+      'Summary PDF export would be generated here with trend analysis, insights, and recommendations.',
+      'info'
+    );
   };
 
   const handleGenerateAISummary = () => {
@@ -562,7 +577,6 @@ This summary presents objective measurements and observed trends from verified h
   };
 
   const handleCopySummary = () => {
-    // Fallback copy method for environments where Clipboard API is blocked
     const textArea = document.createElement('textarea');
     textArea.value = aiSummary;
     textArea.style.position = 'fixed';
@@ -575,17 +589,20 @@ This summary presents objective measurements and observed trends from verified h
     try {
       document.execCommand('copy');
       textArea.remove();
-      alert('Summary copied to clipboard!');
+      showAppAlert('Copied!', 'Summary copied to clipboard successfully.', 'success');
     } catch (err) {
       console.error('Failed to copy:', err);
       textArea.remove();
-      // If execCommand also fails, show the text in a selectable way
-      alert('Please manually select and copy the text from the summary above.');
+      showAppAlert('Copy Failed', 'Please manually select and copy the text from the summary above.', 'warning');
     }
   };
 
   const handleEmailSummary = () => {
-    alert(`Email summary feature would open your email client with:\n\nTo: doctor@hospital.com\nSubject: Medical Summary for Rahul Sharma - ${timelineRange}\nBody: [AI-generated summary]`);
+    showAppAlert(
+      'Email Summary',
+      `This feature would open your email client with:\n\nTo: doctor@hospital.com\nSubject: Medical Summary for Rahul Sharma - ${timelineRange}\nBody: [AI-generated summary]`,
+      'info'
+    );
   };
 
   const getTrendDirection = (data: number[], latest: number) => {
@@ -697,7 +714,7 @@ This summary presents objective measurements and observed trends from verified h
                 <div className="flex gap-3" style={{ width: 'max-content' }}>
                   {/* Upload Report */}
                   <button
-                    onClick={() => alert('Upload new lab report, prescription, or imaging scan')}
+                    onClick={() => showAppAlert('Upload Report', 'Upload a new lab report, prescription, or imaging scan.', 'info')}
                     className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-cyan-500/50 rounded-xl transition-all group"
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -708,7 +725,7 @@ This summary presents objective measurements and observed trends from verified h
 
                   {/* Sync ABHA */}
                   <button
-                    onClick={() => alert('Syncing latest records from ABHA/ABDM health locker...')}
+                    onClick={() => showAppAlert('Syncing Records', 'Syncing latest records from ABHA/ABDM health locker...', 'info')}
                     className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-emerald-500/50 rounded-xl transition-all group"
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -719,7 +736,7 @@ This summary presents objective measurements and observed trends from verified h
 
                   {/* Log Vitals */}
                   <button
-                    onClick={() => alert('Quick log: BP, Blood Sugar, Weight, Heart Rate')}
+                    onClick={() => showAppAlert('Log Vitals', 'Quick log: BP, Blood Sugar, Weight, Heart Rate', 'info')}
                     className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-pink-500/50 rounded-xl transition-all group"
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -745,7 +762,7 @@ This summary presents objective measurements and observed trends from verified h
               <div className="hidden md:grid grid-cols-4 gap-3">
                 {/* Upload Report */}
                 <button
-                  onClick={() => alert('Upload new lab report, prescription, or imaging scan')}
+                  onClick={() => showAppAlert('Upload Report', 'Upload a new lab report, prescription, or imaging scan.', 'info')}
                   className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-cyan-500/50 rounded-xl transition-all group"
                 >
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -756,7 +773,7 @@ This summary presents objective measurements and observed trends from verified h
 
                 {/* Sync ABHA */}
                 <button
-                  onClick={() => alert('Syncing latest records from ABHA/ABDM health locker...')}
+                  onClick={() => showAppAlert('Syncing Records', 'Syncing latest records from ABHA/ABDM health locker...', 'info')}
                   className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-emerald-500/50 rounded-xl transition-all group"
                 >
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -767,7 +784,7 @@ This summary presents objective measurements and observed trends from verified h
 
                 {/* Log Vitals */}
                 <button
-                  onClick={() => alert('Quick log: BP, Blood Sugar, Weight, Heart Rate')}
+                  onClick={() => showAppAlert('Log Vitals', 'Quick log: BP, Blood Sugar, Weight, Heart Rate', 'info')}
                   className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-pink-500/50 rounded-xl transition-all group"
                 >
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1385,6 +1402,14 @@ This summary presents objective measurements and observed trends from verified h
           </div>
         </div>
       )}
+
+      <AppAlert
+        open={alertDialog.open}
+        onClose={() => setAlertDialog(prev => ({ ...prev, open: false }))}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }
