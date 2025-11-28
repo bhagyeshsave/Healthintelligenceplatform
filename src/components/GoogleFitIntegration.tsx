@@ -40,6 +40,28 @@ const parseValue = (val: any): number => {
 };
 
 const extractDataForDate = (dayData: any): GoogleFitData => {
+  // Calculate sleep duration by summing details array duration_minutes
+  let sleepMinutes = 0;
+  let sleepQuality = 'Unknown';
+  
+  if (dayData?.sleep && typeof dayData.sleep === 'object') {
+    // Try to sum duration_minutes from details array
+    if (Array.isArray(dayData.sleep.details)) {
+      sleepMinutes = dayData.sleep.details.reduce((sum: number, entry: any) => {
+        return sum + parseValue(entry.duration_minutes || entry.value || 0);
+      }, 0);
+    } else if (dayData.sleep.total_minutes) {
+      sleepMinutes = parseValue(dayData.sleep.total_minutes);
+    } else if (dayData.sleep.total) {
+      sleepMinutes = parseValue(dayData.sleep.total);
+    }
+    
+    // Get quality from summary or directly
+    sleepQuality = dayData.sleep.summary?.overall_quality || 
+                   dayData.sleep.quality || 
+                   (sleepMinutes > 420 ? 'Good' : sleepMinutes > 300 ? 'Fair' : sleepMinutes > 0 ? 'Poor' : 'Unknown');
+  }
+  
   return {
     steps: parseValue(dayData?.steps?.total),
     heartRate: parseValue(dayData?.heart_rate?.total || dayData?.heartRate?.total),
@@ -47,8 +69,8 @@ const extractDataForDate = (dayData: any): GoogleFitData => {
     distance: Math.round(parseValue(dayData?.distance?.total)),
     activeMinutes: parseValue(dayData?.move_minutes?.total || dayData?.activeMinutes?.total),
     sleep: {
-      duration: typeof dayData?.sleep === 'object' ? parseValue(dayData?.sleep?.total || dayData?.sleep?.duration) : 0,
-      quality: typeof dayData?.sleep === 'object' ? (dayData?.sleep?.quality || 'Unknown') : 'Unknown',
+      duration: Math.round(sleepMinutes),
+      quality: sleepQuality,
     },
     lastSync: new Date().toISOString(),
   };
@@ -254,6 +276,22 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
       window.history.replaceState(null, '', window.location.pathname);
     }
   }, [exchangeCodeForToken]);
+
+  // Auto-refresh data every 1 hour when connected
+  useEffect(() => {
+    if (!isConnected || !accessToken) return;
+
+    const REFRESH_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
+    
+    const intervalId = setInterval(() => {
+      console.log('Auto-refreshing Google Fit data...');
+      fetchGoogleFitData(accessToken);
+    }, REFRESH_INTERVAL);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isConnected, accessToken, fetchGoogleFitData]);
 
   const handleConnect = () => {
     if (!GOOGLE_CLIENT_ID) {
