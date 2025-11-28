@@ -17,13 +17,18 @@ The application is fully configured and running in the Replit environment with:
 - ✅ Deployment configured
 
 ## Recent Changes (November 28, 2025)
-### Google Fit Integration (Rebuilt from Scratch)
-- Completely rebuilt GoogleFitIntegration.tsx with clean, minimal implementation
-- Uses GOOGLE_FIT_CLIENT_ID secret (exposed via Vite as VITE_GOOGLE_FIT_CLIENT_ID)
-- OAuth 2.0 implicit grant flow with redirect-based authentication (no popups)
+### Google Fit Integration (Rebuilt with Authorization Code Flow)
+- Rebuilt GoogleFitIntegration.tsx with secure Authorization Code flow
+- Added Express backend server (server/index.js) for secure token exchange
+- Uses GOOGLE_FIT_CLIENT_ID and GOOGLE_FIT_CLIENT_SECRET secrets
+- OAuth 2.0 Authorization Code flow with refresh token support
+- Backend endpoints:
+  - POST /api/google-fit/token - Exchange auth code for access token
+  - POST /api/google-fit/refresh - Refresh expired access tokens
 - Scopes: fitness.activity.read, fitness.heart_rate.read, fitness.sleep.read, fitness.location.read
 - External API endpoint: https://ombjteysx3.execute-api.us-east-1.amazonaws.com/prod/fetch
-- Token stored in localStorage, auto-loads on mount
+- Tokens stored in localStorage (access_token + refresh_token)
+- Vite configured to proxy /api requests to backend on port 3001
 - Clean UI showing: Steps, Heart Rate, Calories, Sleep, Distance, Active Minutes
 
 ### Custom Themed Alert Dialogs

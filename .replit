@@ -21,21 +21,21 @@ args = "Frontend Development Server"
 name = "Frontend Development Server"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd server && npm start & sleep 2 && npm run dev"
+waitForPort = 5000
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 36465
-externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"

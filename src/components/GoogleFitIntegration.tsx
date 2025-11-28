@@ -22,6 +22,7 @@ interface GoogleFitIntegrationProps {
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_FIT_CLIENT_ID || '';
 const REDIRECT_URI = typeof window !== 'undefined' ? window.location.origin : '';
+const BACKEND_URL = typeof window !== 'undefined' ? window.location.origin : '';
 const SCOPES = [
   'https://www.googleapis.com/auth/fitness.activity.read',
   'https://www.googleapis.com/auth/fitness.heart_rate.read',
@@ -54,7 +55,12 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          throw new Error('Token expired or invalid. Please reconnect.');
+          const refreshToken = localStorage.getItem('google_fit_refresh_token');
+          if (refreshToken) {
+            await refreshAccessToken(refreshToken);
+            return;
+          }
+          throw new Error('Token expired. Please reconnect.');
         }
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
@@ -79,13 +85,74 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
       console.error('Google Fit fetch error:', err);
       setError(err.message || 'Failed to fetch Google Fit data');
       
-      if (err.message.includes('expired') || err.message.includes('invalid')) {
+      if (err.message.includes('expired') || err.message.includes('reconnect')) {
         handleDisconnect();
       }
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  const refreshAccessToken = async (refreshToken: string) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/google-fit/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to refresh token');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('google_fit_access_token', data.access_token);
+      setAccessToken(data.access_token);
+      await fetchGoogleFitData(data.access_token);
+    } catch (err) {
+      console.error('Token refresh failed:', err);
+      handleDisconnect();
+    }
+  };
+
+  const exchangeCodeForToken = useCallback(async (code: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/google-fit/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          redirect_uri: REDIRECT_URI,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Token exchange failed');
+      }
+
+      const data = await response.json();
+      
+      localStorage.setItem('google_fit_access_token', data.access_token);
+      if (data.refresh_token) {
+        localStorage.setItem('google_fit_refresh_token', data.refresh_token);
+      }
+      
+      setAccessToken(data.access_token);
+      setIsConnected(true);
+      onConnectionChange?.(true);
+      
+      await fetchGoogleFitData(data.access_token);
+    } catch (err: any) {
+      console.error('Token exchange error:', err);
+      setError(err.message || 'Failed to connect to Google Fit');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchGoogleFitData, onConnectionChange]);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('google_fit_access_token');
@@ -97,26 +164,18 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
   }, [fetchGoogleFitData]);
 
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-      const params = new URLSearchParams(hash.substring(1));
-      const token = params.get('access_token');
-      
-      if (token) {
-        localStorage.setItem('google_fit_access_token', token);
-        setAccessToken(token);
-        setIsConnected(true);
-        onConnectionChange?.(true);
-        fetchGoogleFitData(token);
-        
-        window.history.replaceState(null, '', window.location.pathname);
-      }
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      exchangeCodeForToken(code);
+      window.history.replaceState(null, '', window.location.pathname);
     }
-  }, [fetchGoogleFitData, onConnectionChange]);
+  }, [exchangeCodeForToken]);
 
   const handleConnect = () => {
     if (!GOOGLE_CLIENT_ID) {
-      setError('Google Client ID not configured. Please add VITE_GOOGLE_FIT_CLIENT_ID to environment.');
+      setError('Google Client ID not configured.');
       return;
     }
 
@@ -126,8 +185,9 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}&` +
       `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-      `response_type=token&` +
+      `response_type=code&` +
       `scope=${encodeURIComponent(SCOPES)}&` +
+      `access_type=offline&` +
       `prompt=consent`;
 
     window.location.href = authUrl;
@@ -135,6 +195,7 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
 
   const handleDisconnect = () => {
     localStorage.removeItem('google_fit_access_token');
+    localStorage.removeItem('google_fit_refresh_token');
     setAccessToken(null);
     setIsConnected(false);
     setGoogleFitData(null);
