@@ -17,15 +17,14 @@ The application is fully configured and running in the Replit environment with:
 - ✅ Deployment configured
 
 ## Recent Changes (November 28, 2025)
-### Google Fit Integration Updates
-- Updated GoogleFitIntegration.tsx with comprehensive OAuth consent screen setup guide
-- Added deprecation warning: Google Fit API closed to new signups May 2024, shutdown June 2025
-- Added step-by-step setup instructions including:
-  - Creating Google Cloud project and enabling Fitness API
-  - Configuring OAuth consent screen with required scopes
-  - Creating OAuth 2.0 Client ID with correct redirect URIs
-- Added copy-to-clipboard button for redirect URI
-- Improved UI with collapsible full setup guide
+### Google Fit Integration (Rebuilt from Scratch)
+- Completely rebuilt GoogleFitIntegration.tsx with clean, minimal implementation
+- Uses GOOGLE_FIT_CLIENT_ID secret (exposed via Vite as VITE_GOOGLE_FIT_CLIENT_ID)
+- OAuth 2.0 implicit grant flow with redirect-based authentication (no popups)
+- Scopes: fitness.activity.read, fitness.heart_rate.read, fitness.sleep.read, fitness.location.read
+- External API endpoint: https://ombjteysx3.execute-api.us-east-1.amazonaws.com/prod/fetch
+- Token stored in localStorage, auto-loads on mount
+- Clean UI showing: Steps, Heart Rate, Calories, Sleep, Distance, Active Minutes
 
 ### Custom Themed Alert Dialogs
 - Replaced all browser alert() calls with custom app-themed dialog boxes
