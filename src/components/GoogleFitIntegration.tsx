@@ -68,15 +68,38 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
 
       const data = await response.json();
       
+      // Check if the API returned error strings in the data fields
+      const hasAuthError = Object.values(data).some(
+        (val) => typeof val === 'string' && val.includes('Error:') && val.includes('401')
+      );
+      
+      if (hasAuthError) {
+        // Token is invalid - need to re-authenticate
+        console.log('Google Fit token expired, clearing and requesting re-auth');
+        handleDisconnect();
+        setError('Your Google Fit session has expired. Please reconnect.');
+        return;
+      }
+      
+      // Parse numeric values safely (handle both numbers and strings)
+      const parseValue = (val: any): number => {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string' && !val.includes('Error')) {
+          const num = parseFloat(val);
+          return isNaN(num) ? 0 : num;
+        }
+        return 0;
+      };
+      
       const transformedData: GoogleFitData = {
-        steps: data.steps || 0,
-        heartRate: data.heartRate || data.heart_rate || 0,
-        calories: data.calories || 0,
-        distance: data.distance || 0,
-        activeMinutes: data.activeMinutes || data.active_minutes || 0,
+        steps: parseValue(data.steps),
+        heartRate: parseValue(data.heartRate || data.heart_rate),
+        calories: parseValue(data.calories),
+        distance: parseValue(data.distance),
+        activeMinutes: parseValue(data.activeMinutes || data.active_minutes || data.move_minutes),
         sleep: {
-          duration: data.sleep?.duration || 0,
-          quality: data.sleep?.quality || 'Unknown',
+          duration: typeof data.sleep === 'object' ? (data.sleep?.duration || 0) : 0,
+          quality: typeof data.sleep === 'object' ? (data.sleep?.quality || 'Unknown') : 'Unknown',
         },
         lastSync: new Date().toISOString(),
       };
