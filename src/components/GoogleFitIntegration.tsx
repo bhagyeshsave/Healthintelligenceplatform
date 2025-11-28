@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Activity, Check, X, RefreshCw, AlertCircle, Heart, Footprints, Moon, Zap, Calendar } from 'lucide-react';
+import { Activity, Check, X, RefreshCw, AlertCircle, Heart, Footprints, Moon, Zap, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface GoogleFitData {
   steps: number;
@@ -30,12 +30,71 @@ const SCOPES = [
   'https://www.googleapis.com/auth/fitness.location.read',
 ].join(' ');
 
+const parseValue = (val: any): number => {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string' && !val.includes('Error')) {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  }
+  return 0;
+};
+
+const extractDataForDate = (dayData: any): GoogleFitData => {
+  return {
+    steps: parseValue(dayData?.steps?.total),
+    heartRate: parseValue(dayData?.heart_rate?.total || dayData?.heartRate?.total),
+    calories: Math.round(parseValue(dayData?.calories?.total)),
+    distance: Math.round(parseValue(dayData?.distance?.total)),
+    activeMinutes: parseValue(dayData?.move_minutes?.total || dayData?.activeMinutes?.total),
+    sleep: {
+      duration: typeof dayData?.sleep === 'object' ? parseValue(dayData?.sleep?.total || dayData?.sleep?.duration) : 0,
+      quality: typeof dayData?.sleep === 'object' ? (dayData?.sleep?.quality || 'Unknown') : 'Unknown',
+    },
+    lastSync: new Date().toISOString(),
+  };
+};
+
+const formatDateDisplay = (dateStr: string): string => {
+  const date = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  if (date.getTime() === today.getTime()) {
+    return 'Today';
+  } else if (date.getTime() === yesterday.getTime()) {
+    return 'Yesterday';
+  } else {
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+};
+
 export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegrationProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [googleFitData, setGoogleFitData] = useState<GoogleFitData | null>(null);
+  const [allDatesData, setAllDatesData] = useState<Record<string, any>>({});
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const handleDateChange = (direction: 'prev' | 'next') => {
+    const currentIndex = availableDates.indexOf(selectedDate);
+    if (direction === 'prev' && currentIndex < availableDates.length - 1) {
+      const newDate = availableDates[currentIndex + 1];
+      setSelectedDate(newDate);
+      setGoogleFitData(extractDataForDate(allDatesData[newDate]));
+    } else if (direction === 'next' && currentIndex > 0) {
+      const newDate = availableDates[currentIndex - 1];
+      setSelectedDate(newDate);
+      setGoogleFitData(extractDataForDate(allDatesData[newDate]));
+    }
+  };
+
+  const canGoBack = availableDates.indexOf(selectedDate) < availableDates.length - 1;
+  const canGoForward = availableDates.indexOf(selectedDate) > 0;
 
   const fetchGoogleFitData = useCallback(async (token: string) => {
     setIsLoading(true);
@@ -83,38 +142,26 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
         return;
       }
       
+      // Store all dates data
+      setAllDatesData(data);
+      
+      // Get available dates sorted (newest first)
+      const dates = Object.keys(data).sort().reverse();
+      setAvailableDates(dates);
+      
       // Get today's date in YYYY-MM-DD format
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
       
-      // Get today's data from the response (data is organized by date)
-      const todayData = data[todayStr] || {};
+      // Set selected date to today if available, otherwise use the most recent date
+      const dateToShow = dates.includes(todayStr) ? todayStr : dates[0] || todayStr;
+      setSelectedDate(dateToShow);
       
-      // Parse numeric values safely
-      const parseValue = (val: any): number => {
-        if (typeof val === 'number') return val;
-        if (typeof val === 'string' && !val.includes('Error')) {
-          const num = parseFloat(val);
-          return isNaN(num) ? 0 : num;
-        }
-        return 0;
-      };
-      
-      // Extract totals from today's data structure
-      const transformedData: GoogleFitData = {
-        steps: parseValue(todayData.steps?.total),
-        heartRate: parseValue(todayData.heart_rate?.total || todayData.heartRate?.total),
-        calories: Math.round(parseValue(todayData.calories?.total)),
-        distance: Math.round(parseValue(todayData.distance?.total)),
-        activeMinutes: parseValue(todayData.move_minutes?.total || todayData.activeMinutes?.total),
-        sleep: {
-          duration: typeof todayData.sleep === 'object' ? parseValue(todayData.sleep?.total || todayData.sleep?.duration) : 0,
-          quality: typeof todayData.sleep === 'object' ? (todayData.sleep?.quality || 'Unknown') : 'Unknown',
-        },
-        lastSync: new Date().toISOString(),
-      };
+      // Extract data for the selected date
+      const dayData = data[dateToShow] || {};
+      const transformedData = extractDataForDate(dayData);
 
-      console.log('Today\'s Google Fit data:', todayStr, transformedData);
+      console.log('Google Fit data for', dateToShow, transformedData);
       setGoogleFitData(transformedData);
     } catch (err: any) {
       console.error('Google Fit fetch error:', err);
@@ -341,6 +388,32 @@ export function GoogleFitIntegration({ onConnectionChange }: GoogleFitIntegratio
 
       {isConnected && googleFitData && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between bg-slate-800/50 border border-slate-700/30 rounded-xl p-3">
+            <Button
+              onClick={() => handleDateChange('prev')}
+              disabled={!canGoBack}
+              variant="ghost"
+              className="h-8 w-8 p-0 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-cyan-400" />
+              <span className="text-white font-medium">{formatDateDisplay(selectedDate)}</span>
+              <span className="text-slate-500 text-sm">({selectedDate})</span>
+            </div>
+            
+            <Button
+              onClick={() => handleDateChange('next')}
+              disabled={!canGoForward}
+              variant="ghost"
+              className="h-8 w-8 p-0 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-slate-800/50 border border-slate-700/30 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
