@@ -127,6 +127,7 @@ app.post('/api/google-fit/data', async (req, res) => {
     }
 
     const data = await response.json();
+    console.log('External API response:', JSON.stringify(data, null, 2));
     res.json(data);
   } catch (error) {
     console.error('Fetch error:', error);
