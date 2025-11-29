@@ -782,7 +782,7 @@ This summary presents objective measurements and observed trends from verified h
                 <div className="flex gap-3" style={{ width: 'max-content' }}>
                   {/* Upload Report */}
                   <button
-                    onClick={() => showAppAlert('Upload Report', 'Upload a new lab report, prescription, or imaging scan.', 'info')}
+                    onClick={() => setShowUploadReport(true)}
                     className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-cyan-500/50 rounded-xl transition-all group"
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -804,7 +804,7 @@ This summary presents objective measurements and observed trends from verified h
 
                   {/* Log Vitals */}
                   <button
-                    onClick={() => showAppAlert('Log Vitals', 'Quick log: BP, Blood Sugar, Weight, Heart Rate', 'info')}
+                    onClick={() => setActiveView('daily-log')}
                     className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-pink-500/50 rounded-xl transition-all group"
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -830,7 +830,7 @@ This summary presents objective measurements and observed trends from verified h
               <div className="hidden md:grid grid-cols-4 gap-3">
                 {/* Upload Report */}
                 <button
-                  onClick={() => showAppAlert('Upload Report', 'Upload a new lab report, prescription, or imaging scan.', 'info')}
+                  onClick={() => setShowUploadReport(true)}
                   className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-cyan-500/50 rounded-xl transition-all group"
                 >
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -852,7 +852,7 @@ This summary presents objective measurements and observed trends from verified h
 
                 {/* Log Vitals */}
                 <button
-                  onClick={() => showAppAlert('Log Vitals', 'Quick log: BP, Blood Sugar, Weight, Heart Rate', 'info')}
+                  onClick={() => setActiveView('daily-log')}
                   className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-pink-500/50 rounded-xl transition-all group"
                 >
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1580,26 +1580,6 @@ This summary presents objective measurements and observed trends from verified h
           </div>
         </div>
       )}
-
-      {/* Quick Action Buttons */}
-      <div className="fixed bottom-6 right-6 flex gap-3 z-40">
-        <Button
-          onClick={() => setShowLogVitals(true)}
-          className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white rounded-full shadow-lg"
-          size="lg"
-        >
-          <Heart className="w-5 h-5" />
-          <span className="hidden sm:inline">Log Vitals</span>
-        </Button>
-        <Button
-          onClick={() => setShowUploadReport(true)}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-full shadow-lg"
-          size="lg"
-        >
-          <Upload className="w-5 h-5" />
-          <span className="hidden sm:inline">Upload</span>
-        </Button>
-      </div>
 
       <AppAlert
         open={alertDialog.open}
