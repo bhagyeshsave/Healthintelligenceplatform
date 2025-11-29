@@ -280,6 +280,7 @@ export function HealthRecords() {
   const [selectedVitals, setSelectedVitals] = useState<string[]>(['cbc', 'bp', 'sugar']);
   const [showLogVitals, setShowLogVitals] = useState(false);
   const [showUploadReport, setShowUploadReport] = useState(false);
+  const [showMyReports, setShowMyReports] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([
     {
       id: 'doc1',
@@ -791,6 +792,17 @@ This summary presents objective measurements and observed trends from verified h
                     <span className="text-slate-300 text-xs text-center font-medium">Upload Report</span>
                   </button>
 
+                  {/* My Reports */}
+                  <button
+                    onClick={() => setShowMyReports(true)}
+                    className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-orange-500/50 rounded-xl transition-all group"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <FileStack className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-slate-300 text-xs text-center font-medium">My Reports</span>
+                  </button>
+
                   {/* Sync ABHA */}
                   <button
                     onClick={() => showAppAlert('Syncing Records', 'Syncing latest records from ABHA/ABDM health locker...', 'info')}
@@ -827,7 +839,7 @@ This summary presents objective measurements and observed trends from verified h
               </div>
 
               {/* Desktop: Grid Layout */}
-              <div className="hidden md:grid grid-cols-4 gap-3">
+              <div className="hidden md:grid grid-cols-5 gap-3">
                 {/* Upload Report */}
                 <button
                   onClick={() => setShowUploadReport(true)}
@@ -837,6 +849,17 @@ This summary presents objective measurements and observed trends from verified h
                     <Upload className="w-5 h-5 text-white" />
                   </div>
                   <span className="text-slate-300 text-xs text-center font-medium">Upload Report</span>
+                </button>
+
+                {/* My Reports */}
+                <button
+                  onClick={() => setShowMyReports(true)}
+                  className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-orange-500/50 rounded-xl transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <FileStack className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-slate-300 text-xs text-center font-medium">My Reports</span>
                 </button>
 
                 {/* Sync ABHA */}
@@ -1521,7 +1544,7 @@ This summary presents objective measurements and observed trends from verified h
       {/* Upload Report Modal */}
       {showUploadReport && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-2xl w-full">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Upload className="w-5 h-5 text-blue-400" />
@@ -1532,50 +1555,87 @@ This summary presents objective measurements and observed trends from verified h
               </button>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Upload Section */}
-              <div className="border-2 border-dashed border-slate-600 rounded-xl p-6 text-center hover:border-slate-500 transition-colors cursor-pointer">
-                <input type="file" id="file-upload" accept=".pdf,.jpg,.png,.doc,.docx" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-white font-medium">Click to upload</p>
-                  <p className="text-slate-400 text-xs mt-1">or drag and drop</p>
-                  <p className="text-slate-500 text-xs mt-2">PDF, JPG, PNG, DOC up to 10MB</p>
-                </label>
-                {isUploading && <p className="text-blue-400 text-sm mt-2">Uploading...</p>}
-              </div>
-
-              {/* Uploaded Files Section */}
-              <div>
-                <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-                  <FileStack className="w-4 h-4" />
-                  Uploaded Files ({uploadedFiles.length})
-                </h4>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {uploadedFiles.length > 0 ? (
-                    uploadedFiles.map((file) => (
-                      <div key={file.id} className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <File className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-slate-300 text-sm truncate">{file.name}</p>
-                            <p className="text-slate-500 text-xs">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                          </div>
-                        </div>
-                        <Button size="sm" variant="ghost" onClick={() => handleDownloadFile(file.id, file.name)} className="text-blue-400 hover:text-blue-300">
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-slate-400 text-xs text-center py-4">No files uploaded yet</p>
-                  )}
+            {/* Upload Section */}
+            <div className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:border-cyan-500/50 transition-colors cursor-pointer">
+              <input type="file" id="file-upload" accept=".pdf,.jpg,.png,.doc,.docx" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mx-auto mb-4">
+                  <Upload className="w-7 h-7 text-cyan-400" />
                 </div>
-              </div>
+                <p className="text-white font-medium">Click to upload</p>
+                <p className="text-slate-400 text-xs mt-1">or drag and drop</p>
+                <p className="text-slate-500 text-xs mt-3">Supported: PDF, JPG, PNG, DOC (max 10MB)</p>
+              </label>
+              {isUploading && (
+                <div className="mt-4">
+                  <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 animate-pulse" style={{ width: '60%' }}></div>
+                  </div>
+                  <p className="text-cyan-400 text-sm mt-2">Uploading to S3...</p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-6">
-              <Button onClick={() => setShowUploadReport(false)} variant="outline" className="flex-1">Close</Button>
+              <Button onClick={() => setShowUploadReport(false)} variant="outline" className="flex-1">Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* My Reports Modal */}
+      {showMyReports && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-lg w-full">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FileStack className="w-5 h-5 text-orange-400" />
+                <h3 className="text-white font-semibold">My Reports</h3>
+                <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30">{uploadedFiles.length}</Badge>
+              </div>
+              <button onClick={() => setShowMyReports(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-slate-400 text-sm mb-4">Your uploaded medical reports stored in S3</p>
+
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {uploadedFiles.length > 0 ? (
+                uploadedFiles.map((file) => (
+                  <div key={file.id} className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 flex items-center justify-between hover:border-slate-600 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/20 flex items-center justify-center flex-shrink-0">
+                        <File className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white text-sm font-medium truncate">{file.name}</p>
+                        <p className="text-slate-500 text-xs">{(file.size / 1024 / 1024).toFixed(2)} MB • {new Date(file.uploadedAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <Button size="sm" onClick={() => handleDownloadFile(file.id, file.name)} className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white">
+                      <Download className="w-4 h-4 mr-1" />
+                      Download
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
+                    <FileStack className="w-8 h-8 text-slate-600" />
+                  </div>
+                  <p className="text-slate-400 text-sm">No reports uploaded yet</p>
+                  <p className="text-slate-500 text-xs mt-1">Upload your first report using the Upload button</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button onClick={() => setShowMyReports(false)} variant="outline" className="flex-1">Close</Button>
+              <Button onClick={() => { setShowMyReports(false); setShowUploadReport(true); }} className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500">
+                <Upload className="w-4 h-4 mr-2" />
+                Upload New
+              </Button>
             </div>
           </div>
         </div>
