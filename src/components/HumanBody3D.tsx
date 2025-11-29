@@ -294,9 +294,16 @@ export function HumanBody3D({
     dpr: [1, 2]
   }), []);
 
+  // Camera positioned to look at chest level
   const cameraPosition = useMemo<[number, number, number]>(
-    () => [0, 1, 8 / zoom], 
+    () => [0, 1.2, 6 / zoom], 
     [zoom]
+  );
+
+  // Target point at chest region (y = 1.2 for chest level)
+  const targetPosition = useMemo<[number, number, number]>(
+    () => [0, 1.2, 0], 
+    []
   );
 
   return (
@@ -306,12 +313,12 @@ export function HumanBody3D({
         <OrbitControls
           enableZoom={true}
           enablePan={false}
-          minDistance={4}
-          maxDistance={12}
-          minPolarAngle={Math.PI / 4}
-          maxPolarAngle={Math.PI / 1.5}
+          target={targetPosition}
+          minDistance={3}
+          maxDistance={10}
+          minPolarAngle={Math.PI / 2}
+          maxPolarAngle={Math.PI / 2}
           autoRotate={false}
-          autoRotateSpeed={2}
         />
         
         <HumanBodyModel
