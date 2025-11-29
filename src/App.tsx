@@ -20,7 +20,6 @@ if (typeof window !== 'undefined' && !(window as any).__THREE_DEVTOOLS__) {
 }
 
 import { useState } from 'react';
-import { HomePage } from './components/HomePage';
 import { HealthRecords } from './components/HealthRecords';
 import { UserProfile } from './components/UserProfile';
 import { Routines } from './components/Routines';
@@ -29,11 +28,10 @@ import { FloatingAIChat } from './components/FloatingAIChat';
 import { Activity, FileText, User, Repeat, Sparkles } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'twin-v2' | 'records' | 'routines' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'twin-v2' | 'records' | 'routines' | 'profile'>('twin-v2');
 
   const tabs = [
-    { id: 'home', label: 'Digital Twin', icon: Activity },
-    { id: 'twin-v2', label: 'Twin v2', icon: Sparkles },
+    { id: 'twin-v2', label: 'Digital Twin', icon: Sparkles },
     { id: 'records', label: 'Health Records', icon: FileText },
     { id: 'routines', label: 'Routines', icon: Repeat },
     { id: 'profile', label: 'Profile', icon: User },
@@ -86,7 +84,6 @@ export default function App() {
 
       {/* Content */}
       <div className="relative">
-        {activeTab === 'home' && <HomePage />}
         {activeTab === 'twin-v2' && <DigitalTwinV2 />}
         {activeTab === 'records' && <HealthRecords />}
         {activeTab === 'routines' && <Routines />}
