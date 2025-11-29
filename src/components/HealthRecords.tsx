@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Activity, Pill, Calendar, Download, Search, Filter, MessageSquare, Mic, Send, Plus, X, Clock, TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle, BarChart3, FileDown, Sparkles, Mail, Copy, List, LayoutGrid, Upload, RefreshCw, Share2, Zap, Bell, UserPlus, FileStack, Heart, ChevronLeft, ChevronRight, Watch, Droplet, Wind, Moon, Flame } from 'lucide-react';
+import { FileText, Activity, Pill, Calendar, Download, Search, Filter, MessageSquare, Mic, Send, Plus, X, Clock, TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle, BarChart3, FileDown, Sparkles, Mail, Copy, List, LayoutGrid, Upload, RefreshCw, Share2, Zap, Bell, UserPlus, FileStack, Heart, ChevronLeft, ChevronRight, Watch, Droplet, Wind, Moon, Flame, File } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -8,6 +8,8 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import Slider from 'react-slick';
 import { DailyLog } from './DailyLog';
 import { AppAlert } from './ui/app-alert';
+import { uploadToS3, downloadFromS3 } from '../utils/s3Upload';
+import type { UploadedFile } from '../utils/s3Upload';
 
 // Today's Vitals from Wearables/Devices (Real-time data)
 const todaysVitalsData = [
@@ -276,6 +278,26 @@ export function HealthRecords() {
   const [aiSummary, setAiSummary] = useState('');
   const [summaryGenerated, setSummaryGenerated] = useState(false);
   const [selectedVitals, setSelectedVitals] = useState<string[]>(['cbc', 'bp', 'sugar']);
+  const [showLogVitals, setShowLogVitals] = useState(false);
+  const [showUploadReport, setShowUploadReport] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([
+    {
+      id: 'doc1',
+      name: 'Lab Report - Nov 2024.pdf',
+      size: 1024000,
+      type: 'application/pdf',
+      uploadedAt: new Date().toISOString(),
+      url: '/downloads/lab-report.pdf'
+    }
+  ]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [newVitals, setNewVitals] = useState({
+    heartRate: '',
+    systolic: '',
+    diastolic: '',
+    glucose: '',
+    temperature: '',
+  });
   
   const [alertDialog, setAlertDialog] = useState<{
     open: boolean;
@@ -286,6 +308,52 @@ export function HealthRecords() {
 
   const showAppAlert = (title: string, message: string, type: 'success' | 'warning' | 'info' | 'emergency' = 'info') => {
     setAlertDialog({ open: true, title, message, type });
+  };
+
+  const handleLogVitals = () => {
+    if (!newVitals.heartRate && !newVitals.systolic && !newVitals.glucose && !newVitals.temperature) {
+      showAppAlert('Empty Form', 'Please enter at least one vital sign', 'warning');
+      return;
+    }
+
+    const vitalsEntry: LogEntry = {
+      id: Date.now().toString(),
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toTimeString().split(' ')[0].slice(0, 5),
+      type: 'vital',
+      content: `HR: ${newVitals.heartRate || '-'} bpm, BP: ${newVitals.systolic}/${newVitals.diastolic} mmHg, Glucose: ${newVitals.glucose || '-'} mg/dL, Temp: ${newVitals.temperature || '-'}°C`,
+      tags: ['logged', 'vital-signs'],
+    };
+
+    setLogs([vitalsEntry, ...logs]);
+    setNewVitals({ heartRate: '', systolic: '', diastolic: '', glucose: '', temperature: '' });
+    setShowLogVitals(false);
+    showAppAlert('Vitals Logged', 'Your vital signs have been recorded successfully', 'success');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const uploaded = await uploadToS3(file);
+      setUploadedFiles([uploaded, ...uploadedFiles]);
+      showAppAlert('Upload Successful', `${file.name} uploaded to S3 bucket`, 'success');
+      setShowUploadReport(false);
+    } catch (error) {
+      showAppAlert('Upload Failed', 'Could not upload file to S3', 'warning');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDownloadFile = async (fileId: string, fileName: string) => {
+    try {
+      await downloadFromS3(fileId, fileName);
+    } catch (error) {
+      showAppAlert('Download Failed', 'Could not download file', 'warning');
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -1402,6 +1470,136 @@ This summary presents objective measurements and observed trends from verified h
           </div>
         </div>
       )}
+
+      {/* Log Vitals Modal */}
+      {showLogVitals && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Heart className="w-5 h-5 text-red-400" />
+                <h3 className="text-white font-semibold">Log Vital Signs</h3>
+              </div>
+              <button onClick={() => setShowLogVitals(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-slate-300 text-sm">Heart Rate (bpm)</label>
+                <Input type="number" placeholder="e.g., 72" value={newVitals.heartRate} onChange={(e) => setNewVitals({...newVitals, heartRate: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 text-sm">Systolic (mmHg)</label>
+                  <Input type="number" placeholder="e.g., 120" value={newVitals.systolic} onChange={(e) => setNewVitals({...newVitals, systolic: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-slate-300 text-sm">Diastolic (mmHg)</label>
+                  <Input type="number" placeholder="e.g., 80" value={newVitals.diastolic} onChange={(e) => setNewVitals({...newVitals, diastolic: e.target.value})} />
+                </div>
+              </div>
+              <div>
+                <label className="text-slate-300 text-sm">Blood Glucose (mg/dL)</label>
+                <Input type="number" placeholder="e.g., 100" value={newVitals.glucose} onChange={(e) => setNewVitals({...newVitals, glucose: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-slate-300 text-sm">Temperature (°C)</label>
+                <Input type="number" placeholder="e.g., 37" step="0.1" value={newVitals.temperature} onChange={(e) => setNewVitals({...newVitals, temperature: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button onClick={() => setShowLogVitals(false)} variant="outline" className="flex-1">Cancel</Button>
+              <Button onClick={handleLogVitals} className="flex-1 bg-green-600 hover:bg-green-700">Save Vitals</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Report Modal */}
+      {showUploadReport && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-2xl w-full">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-blue-400" />
+                <h3 className="text-white font-semibold">Upload Medical Report</h3>
+              </div>
+              <button onClick={() => setShowUploadReport(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Upload Section */}
+              <div className="border-2 border-dashed border-slate-600 rounded-xl p-6 text-center hover:border-slate-500 transition-colors cursor-pointer">
+                <input type="file" id="file-upload" accept=".pdf,.jpg,.png,.doc,.docx" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-white font-medium">Click to upload</p>
+                  <p className="text-slate-400 text-xs mt-1">or drag and drop</p>
+                  <p className="text-slate-500 text-xs mt-2">PDF, JPG, PNG, DOC up to 10MB</p>
+                </label>
+                {isUploading && <p className="text-blue-400 text-sm mt-2">Uploading...</p>}
+              </div>
+
+              {/* Uploaded Files Section */}
+              <div>
+                <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                  <FileStack className="w-4 h-4" />
+                  Uploaded Files ({uploadedFiles.length})
+                </h4>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {uploadedFiles.length > 0 ? (
+                    uploadedFiles.map((file) => (
+                      <div key={file.id} className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <File className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-slate-300 text-sm truncate">{file.name}</p>
+                            <p className="text-slate-500 text-xs">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                        </div>
+                        <Button size="sm" variant="ghost" onClick={() => handleDownloadFile(file.id, file.name)} className="text-blue-400 hover:text-blue-300">
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-400 text-xs text-center py-4">No files uploaded yet</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button onClick={() => setShowUploadReport(false)} variant="outline" className="flex-1">Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Action Buttons */}
+      <div className="fixed bottom-6 right-6 flex gap-3 z-40">
+        <Button
+          onClick={() => setShowLogVitals(true)}
+          className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white rounded-full shadow-lg"
+          size="lg"
+        >
+          <Heart className="w-5 h-5" />
+          <span className="hidden sm:inline">Log Vitals</span>
+        </Button>
+        <Button
+          onClick={() => setShowUploadReport(true)}
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-full shadow-lg"
+          size="lg"
+        >
+          <Upload className="w-5 h-5" />
+          <span className="hidden sm:inline">Upload</span>
+        </Button>
+      </div>
 
       <AppAlert
         open={alertDialog.open}

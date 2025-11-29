@@ -145,3 +145,61 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);
 });
+
+// S3 file upload endpoint
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/upload-to-s3', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file provided' });
+  }
+
+  const bucket = req.body.bucket || 'med-document-input';
+  const fileName = `${Date.now()}-${req.file.originalname}`;
+
+  // In a real implementation, upload to S3
+  // For now, store file info in memory
+  console.log(`File uploaded: ${fileName} to ${bucket}`);
+  
+  res.json({
+    fileKey: fileName,
+    url: `/downloads/${bucket}/${fileName}`,
+    message: 'File uploaded successfully'
+  });
+});
+
+// List S3 files endpoint
+app.get('/api/list-s3-files', async (req, res) => {
+  const bucket = req.query.bucket || 'med-document-input';
+  
+  // Return mock data for now
+  res.json([
+    {
+      id: 'doc1',
+      name: 'Lab Report - Nov 2024.pdf',
+      size: 1024000,
+      type: 'application/pdf',
+      uploadedAt: new Date().toISOString(),
+      url: `/downloads/${bucket}/lab-report.pdf`
+    },
+    {
+      id: 'doc2',
+      name: 'Chest X-ray Report.pdf',
+      size: 2048000,
+      type: 'application/pdf',
+      uploadedAt: new Date(Date.now() - 86400000).toISOString(),
+      url: `/downloads/${bucket}/xray.pdf`
+    }
+  ]);
+});
+
+// Download file endpoint
+app.get('/api/download-from-s3', async (req, res) => {
+  const { key, bucket } = req.query;
+  
+  // In a real implementation, download from S3
+  console.log(`Downloading file: ${key} from ${bucket}`);
+  
+  res.json({ message: 'Download initiated' });
+});
