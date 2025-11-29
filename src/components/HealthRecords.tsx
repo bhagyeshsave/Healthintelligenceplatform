@@ -11,7 +11,7 @@ import { AppAlert } from './ui/app-alert';
 import { uploadToS3, downloadFromS3 } from '../utils/s3Upload';
 import type { UploadedFile } from '../utils/s3Upload';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 // Today's Vitals from Wearables/Devices (Real-time data)
 const todaysVitalsData = [
@@ -516,7 +516,7 @@ export function HealthRecords() {
     doc.setFont('helvetica', 'normal');
 
     // CBC Table
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [['Parameter', 'Aug 26', 'Sep 15', 'Oct 10', 'Nov 20', 'Trend', 'Reference']],
       body: [
@@ -542,7 +542,7 @@ export function HealthRecords() {
     yPos += 25;
     doc.setTextColor(0, 0, 0);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [['Date', 'Systolic (mmHg)', 'Diastolic (mmHg)', 'Status']],
       body: bpTrendData.map(d => [d.date, d.systolic.toString(), d.diastolic.toString(), d.systolic >= 130 ? 'Elevated' : 'Normal']),
@@ -564,7 +564,7 @@ export function HealthRecords() {
     yPos += 25;
     doc.setTextColor(0, 0, 0);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [['Date', 'Fasting (mg/dL)', 'Status']],
       body: sugarTrendData.map(d => [d.date, d.fasting.toString(), d.fasting >= 100 ? 'Pre-diabetic' : 'Normal']),
