@@ -771,128 +771,67 @@ This summary presents objective measurements and observed trends from verified h
               </select>
             </div>
 
-            {/* Quick Actions Bar - Mobile Optimized with Carousel */}
-            <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Zap className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-white font-medium">Quick Actions</h3>
-              </div>
-              
-              {/* Mobile: Horizontal Scroll Carousel */}
-              <div className="md:hidden overflow-x-auto pb-2 -mx-4 px-4">
-                <div className="flex gap-3" style={{ width: 'max-content' }}>
-                  {/* Upload Report */}
-                  <button
-                    onClick={() => setShowUploadReport(true)}
-                    className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-cyan-500/50 rounded-xl transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Upload className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-slate-300 text-xs text-center font-medium">Upload Report</span>
-                  </button>
-
-                  {/* My Reports */}
-                  <button
-                    onClick={() => setShowMyReports(true)}
-                    className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-orange-500/50 rounded-xl transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <FileStack className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-slate-300 text-xs text-center font-medium">My Reports</span>
-                  </button>
-
-                  {/* Sync ABHA */}
-                  <button
-                    onClick={() => showAppAlert('Syncing Records', 'Syncing latest records from ABHA/ABDM health locker...', 'info')}
-                    className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-emerald-500/50 rounded-xl transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <RefreshCw className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-slate-300 text-xs text-center font-medium">Sync ABHA</span>
-                  </button>
-
-                  {/* Log Vitals */}
-                  <button
-                    onClick={() => setActiveView('daily-log')}
-                    className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-pink-500/50 rounded-xl transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Heart className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-slate-300 text-xs text-center font-medium">Log Vitals</span>
-                  </button>
-
-                  {/* Generate AI Summary */}
-                  <button
-                    onClick={handleGenerateAISummary}
-                    className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-purple-500/50 rounded-xl transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Sparkles className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-slate-300 text-xs text-center font-medium">AI Summary</span>
-                  </button>
+            {/* Quick Actions Bar - Compact */}
+            <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 rounded-xl p-3">
+              <div className="flex items-center flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 mr-2">
+                  <Zap className="w-4 h-4 text-cyan-400" />
+                  <span className="text-slate-400 text-xs font-medium">Quick Actions</span>
                 </div>
-              </div>
-
-              {/* Desktop: Grid Layout */}
-              <div className="hidden md:grid grid-cols-5 gap-3">
+                
                 {/* Upload Report */}
                 <button
                   onClick={() => setShowUploadReport(true)}
-                  className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-cyan-500/50 rounded-xl transition-all group"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-cyan-500/50 rounded-lg transition-all group"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Upload className="w-5 h-5 text-white" />
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Upload className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span className="text-slate-300 text-xs text-center font-medium">Upload Report</span>
+                  <span className="text-slate-300 text-xs font-medium">Upload</span>
                 </button>
 
                 {/* My Reports */}
                 <button
                   onClick={() => setShowMyReports(true)}
-                  className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-orange-500/50 rounded-xl transition-all group"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-orange-500/50 rounded-lg transition-all group"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <FileStack className="w-5 h-5 text-white" />
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <FileStack className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span className="text-slate-300 text-xs text-center font-medium">My Reports</span>
+                  <span className="text-slate-300 text-xs font-medium">My Reports</span>
                 </button>
 
                 {/* Sync ABHA */}
                 <button
                   onClick={() => showAppAlert('Syncing Records', 'Syncing latest records from ABHA/ABDM health locker...', 'info')}
-                  className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-emerald-500/50 rounded-xl transition-all group"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-emerald-500/50 rounded-lg transition-all group"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <RefreshCw className="w-5 h-5 text-white" />
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <RefreshCw className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span className="text-slate-300 text-xs text-center font-medium">Sync ABHA</span>
+                  <span className="text-slate-300 text-xs font-medium">Sync ABHA</span>
                 </button>
 
                 {/* Log Vitals */}
                 <button
                   onClick={() => setActiveView('daily-log')}
-                  className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-pink-500/50 rounded-xl transition-all group"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-pink-500/50 rounded-lg transition-all group"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Heart className="w-5 h-5 text-white" />
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Heart className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span className="text-slate-300 text-xs text-center font-medium">Log Vitals</span>
+                  <span className="text-slate-300 text-xs font-medium">Log Vitals</span>
                 </button>
 
                 {/* Generate AI Summary */}
                 <button
                   onClick={handleGenerateAISummary}
-                  className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-purple-500/50 rounded-xl transition-all group"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-purple-500/50 rounded-lg transition-all group"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Sparkles className="w-5 h-5 text-white" />
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span className="text-slate-300 text-xs text-center font-medium">AI Summary</span>
+                  <span className="text-slate-300 text-xs font-medium">AI Summary</span>
                 </button>
               </div>
             </div>
