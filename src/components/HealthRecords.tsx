@@ -10,6 +10,8 @@ import { DailyLog } from './DailyLog';
 import { AppAlert } from './ui/app-alert';
 import { uploadToS3, downloadFromS3 } from '../utils/s3Upload';
 import type { UploadedFile } from '../utils/s3Upload';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 // Today's Vitals from Wearables/Devices (Real-time data)
 const todaysVitalsData = [
@@ -462,11 +464,176 @@ export function HealthRecords() {
   };
 
   const handleExportSummary = () => {
-    showAppAlert(
-      'PDF Export',
-      'Summary PDF export would be generated here with trend analysis, insights, and recommendations.',
-      'info'
-    );
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let yPos = 20;
+
+    // Helper function to add new page if needed
+    const checkPageBreak = (height: number) => {
+      if (yPos + height > 280) {
+        doc.addPage();
+        yPos = 20;
+      }
+    };
+
+    // Title
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Health Intelligence Report', pageWidth / 2, 25, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`, pageWidth / 2, 35, { align: 'center' });
+
+    yPos = 55;
+    doc.setTextColor(0, 0, 0);
+
+    // Patient Info
+    doc.setFillColor(241, 245, 249); // slate-100
+    doc.rect(margin, yPos - 5, pageWidth - 2 * margin, 25, 'F');
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Patient: Rahul Sharma', margin + 5, yPos + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('ABHA ID: rahul.sharma@abdm', margin + 5, yPos + 15);
+    doc.text(`Report Period: ${timelineRange}`, pageWidth - margin - 60, yPos + 5);
+    yPos += 35;
+
+    // Section 1: CBC Trends
+    checkPageBreak(60);
+    doc.setFillColor(6, 182, 212); // cyan-500
+    doc.rect(margin, yPos, 5, 20, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(6, 182, 212);
+    doc.text('1. Complete Blood Count (CBC) Trends', margin + 10, yPos + 12);
+    yPos += 25;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+
+    // CBC Table
+    (doc as any).autoTable({
+      startY: yPos,
+      head: [['Parameter', 'Aug 26', 'Sep 15', 'Oct 10', 'Nov 20', 'Trend', 'Reference']],
+      body: [
+        ['Hemoglobin (g/dL)', '13.8', '14.0', '14.1', '14.2', '+2.9%', '13.5-17.5'],
+        ['WBC (/μL)', '6,800', '7,000', '7,100', '7,200', '+5.9%', '4,000-11,000'],
+        ['Platelets (/μL)', '245,000', '248,000', '250,000', '252,000', 'Stable', '150,000-400,000'],
+      ],
+      margin: { left: margin },
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [241, 245, 249] },
+    });
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+
+    // Section 2: Blood Pressure Trends
+    checkPageBreak(60);
+    doc.setFillColor(249, 115, 22); // orange-500
+    doc.rect(margin, yPos, 5, 20, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(249, 115, 22);
+    doc.text('2. Blood Pressure Trends', margin + 10, yPos + 12);
+    yPos += 25;
+    doc.setTextColor(0, 0, 0);
+
+    (doc as any).autoTable({
+      startY: yPos,
+      head: [['Date', 'Systolic (mmHg)', 'Diastolic (mmHg)', 'Status']],
+      body: bpTrendData.map(d => [d.date, d.systolic.toString(), d.diastolic.toString(), d.systolic >= 130 ? 'Elevated' : 'Normal']),
+      margin: { left: margin },
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [241, 245, 249] },
+    });
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+
+    // Section 3: Blood Glucose
+    checkPageBreak(60);
+    doc.setFillColor(59, 130, 246); // blue-500
+    doc.rect(margin, yPos, 5, 20, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(59, 130, 246);
+    doc.text('3. Blood Glucose & Metabolic Markers', margin + 10, yPos + 12);
+    yPos += 25;
+    doc.setTextColor(0, 0, 0);
+
+    (doc as any).autoTable({
+      startY: yPos,
+      head: [['Date', 'Fasting (mg/dL)', 'Status']],
+      body: sugarTrendData.map(d => [d.date, d.fasting.toString(), d.fasting >= 100 ? 'Pre-diabetic' : 'Normal']),
+      margin: { left: margin },
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [241, 245, 249] },
+    });
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+
+    // Section 4: Key Trends Summary
+    checkPageBreak(80);
+    doc.setFillColor(139, 92, 246); // violet-500
+    doc.rect(margin, yPos, 5, 20, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(139, 92, 246);
+    doc.text('4. Summary of Key Trends', margin + 10, yPos + 12);
+    yPos += 30;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Stable Metrics:', margin, yPos);
+    yPos += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.text('• Complete Blood Count parameters (all within normal range)', margin + 5, yPos);
+    yPos += 6;
+    doc.text('• HbA1c levels (stable at 6.1-6.2%)', margin + 5, yPos);
+    yPos += 12;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(249, 115, 22);
+    doc.text('Upward Trends (Require Attention):', margin, yPos);
+    yPos += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text('• Blood Pressure: Systolic +6 mmHg, Diastolic +4 mmHg', margin + 5, yPos);
+    yPos += 6;
+    doc.text('• Fasting Glucose: +12 mg/dL (12.2% increase)', margin + 5, yPos);
+    yPos += 6;
+    doc.text('• Post-Meal Glucose: +18 mg/dL (13.3% increase)', margin + 5, yPos);
+    yPos += 12;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(239, 68, 68); // red-500
+    doc.text('Range Transitions:', margin, yPos);
+    yPos += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text('• Blood Pressure: Normal → Elevated/Pre-hypertension', margin + 5, yPos);
+    yPos += 6;
+    doc.text('• Fasting Glucose: Normal → Pre-diabetic', margin + 5, yPos);
+    yPos += 6;
+    doc.text('• Post-Meal Glucose: Normal → Pre-diabetic', margin + 5, yPos);
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, 290, { align: 'center' });
+      doc.text('Thryve Health Intelligence Platform • Data from ABHA/ABDM verified sources', pageWidth / 2, 295, { align: 'center' });
+    }
+
+    // Save the PDF
+    doc.save(`health-summary-${timelineRange}-${new Date().toISOString().split('T')[0]}.pdf`);
+    showAppAlert('PDF Exported', 'Your health summary has been downloaded successfully!', 'success');
   };
 
   const handleGenerateAISummary = () => {
