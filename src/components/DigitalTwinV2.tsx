@@ -4,6 +4,7 @@ import { Badge } from './ui/badge';
 import { LifestyleSimulationCompact } from './LifestyleSimulationCompact';
 import { HumanAnatomyViewer } from './anatomy-viewer/HumanAnatomyViewer';
 import type { AnatomyData, BodyPartInfo } from './anatomy-viewer/types';
+import { calculateTotalRiskIndex, calculateYearsImpact } from '../utils/lifespanRiskModel';
 import {
   Activity,
   Heart,
@@ -26,6 +27,13 @@ import {
   Sparkles,
   Plus,
   Minus,
+  Cigarette,
+  Dumbbell,
+  Apple,
+  Moon,
+  Zap,
+  Wine,
+  Armchair,
 } from 'lucide-react';
 
 interface BodyPart {
@@ -51,8 +59,10 @@ interface HistoricalData {
 interface WhatIfFactor {
   id: string;
   name: string;
-  category: 'lifestyle' | 'diet' | 'exercise' | 'sleep' | 'stress';
-  impact: number; // years impact on biological age
+  category: 'smoking' | 'exercise' | 'diet' | 'sleep' | 'stress' | 'alcohol' | 'sitting';
+  currentValue: number | string;
+  targetValue: number | string;
+  unit: string;
   icon: any;
   description: string;
 }
@@ -202,67 +212,74 @@ const historicalDataMap: Record<string, HistoricalData[]> = {
 
 const whatIfFactors: WhatIfFactor[] = [
   {
-    id: 'exercise-5x',
-    name: 'Exercise 5x/week',
+    id: 'smoking',
+    name: 'Smoking Status',
+    category: 'smoking',
+    currentValue: 1,
+    targetValue: 0,
+    unit: '0=No, 1=Yes',
+    icon: Cigarette,
+    description: 'Smoking greatly increases mortality risk',
+  },
+  {
+    id: 'exercise',
+    name: 'Exercise Frequency',
     category: 'exercise',
-    impact: -2.5,
-    icon: Activity,
-    description: '45min cardio + strength training',
+    currentValue: 2,
+    targetValue: 5,
+    unit: 'days/week (30+ min)',
+    icon: Dumbbell,
+    description: 'Target 5+ days/week for optimal health',
   },
   {
-    id: 'sleep-8h',
-    name: 'Sleep 8h consistently',
-    category: 'sleep',
-    impact: -1.8,
-    icon: Activity,
-    description: 'Consistent 10pm-6am schedule',
-  },
-  {
-    id: 'mediterranean-diet',
-    name: 'Mediterranean Diet',
+    id: 'diet',
+    name: 'Diet Quality',
     category: 'diet',
-    impact: -2.2,
-    icon: Activity,
-    description: 'Plant-based, omega-3 rich',
+    currentValue: 2,
+    targetValue: 3,
+    unit: '1=Poor, 2=Avg, 3=Great',
+    icon: Apple,
+    description: 'Mediterranean or plant-based diet',
   },
   {
-    id: 'quit-smoking',
-    name: 'Quit Smoking',
-    category: 'lifestyle',
-    impact: -5.5,
-    icon: Activity,
-    description: 'Complete cessation',
-  },
-  {
-    id: 'stress-management',
-    name: 'Daily Meditation',
-    category: 'stress',
-    impact: -1.2,
-    icon: Activity,
-    description: '20min mindfulness practice',
-  },
-  {
-    id: 'alcohol-reduction',
-    name: 'Limit Alcohol',
-    category: 'lifestyle',
-    impact: -1.5,
-    description: '≤2 drinks/week',
-  },
-  {
-    id: 'poor-sleep',
-    name: 'Poor Sleep (<6h)',
+    id: 'sleep',
+    name: 'Sleep Quality',
     category: 'sleep',
-    impact: 2.8,
-    icon: Activity,
-    description: 'Chronic sleep deprivation',
+    currentValue: 2,
+    targetValue: 2,
+    unit: '1=Poor, 2=Good, 3=Excess',
+    icon: Moon,
+    description: 'Maintain 7-9 hours per night',
   },
   {
-    id: 'sedentary',
-    name: 'Sedentary Lifestyle',
-    category: 'exercise',
-    impact: 3.5,
-    icon: Activity,
-    description: '<3000 steps/day',
+    id: 'stress',
+    name: 'Stress Level',
+    category: 'stress',
+    currentValue: 2,
+    targetValue: 1,
+    unit: '1=Low, 2=Med, 3=High',
+    icon: Zap,
+    description: 'Reduce through meditation & relaxation',
+  },
+  {
+    id: 'alcohol',
+    name: 'Alcohol Consumption',
+    category: 'alcohol',
+    currentValue: 7,
+    targetValue: 1,
+    unit: 'drinks/week',
+    icon: Wine,
+    description: 'Moderate to light consumption',
+  },
+  {
+    id: 'sitting',
+    name: 'Sitting Time',
+    category: 'sitting',
+    currentValue: 8,
+    targetValue: 4,
+    unit: 'hours/day',
+    icon: Armchair,
+    description: 'Reduce sedentary time daily',
   },
 ];
 
@@ -483,8 +500,20 @@ export function DigitalTwinV2() {
   const selectedWhatIfFactors = whatIfFactors.filter((f) =>
     selectedFactors.includes(f.id)
   );
-  const totalImpact = selectedWhatIfFactors.reduce((sum, f) => sum + f.impact, 0);
-  const projectedBioAge = currentBioAge + totalImpact;
+  
+  // Calculate risk using Cox Proportional Hazards model
+  const currentFactors = Object.fromEntries(
+    whatIfFactors.map((f) => [f.category, f.currentValue])
+  );
+  const targetFactors = Object.fromEntries(
+    whatIfFactors.map((f) => [f.category, f.targetValue])
+  );
+  const currentRisk = calculateTotalRiskIndex(currentFactors);
+  const targetRisk = calculateTotalRiskIndex(
+    selectedFactors.length > 0 ? targetFactors : currentFactors
+  );
+  const yearsGained = calculateYearsImpact(currentRisk, targetRisk);
+  const projectedBioAge = currentBioAge - yearsGained;
   const ageGap = projectedBioAge - actualAge;
 
   const toggleFactor = (factorId: string) => {
@@ -821,7 +850,7 @@ export function DigitalTwinV2() {
                   {whatIfFactors.map((factor) => {
                     const Icon = factor.icon;
                     const isSelected = selectedFactors.includes(factor.id);
-                    const isPositive = factor.impact < 0;
+                    const improvement = Number(factor.targetValue) < Number(factor.currentValue);
                     
                     return (
                       <button
@@ -829,9 +858,9 @@ export function DigitalTwinV2() {
                         onClick={() => toggleFactor(factor.id)}
                         className={`text-left p-3 rounded-lg border transition-all ${
                           isSelected
-                            ? isPositive
+                            ? improvement
                               ? 'bg-green-500/20 border-green-500/40'
-                              : 'bg-red-500/20 border-red-500/40'
+                              : 'bg-blue-500/20 border-blue-500/40'
                             : 'bg-slate-900/50 border-slate-700 hover:border-slate-600'
                         }`}
                       >
@@ -840,15 +869,15 @@ export function DigitalTwinV2() {
                             {isSelected ? (
                               <div
                                 className={`w-5 h-5 rounded flex items-center justify-center ${
-                                  isPositive
+                                  improvement
                                     ? 'bg-green-500'
-                                    : 'bg-red-500'
+                                    : 'bg-blue-500'
                                 }`}
                               >
-                                {isPositive ? (
+                                {improvement ? (
                                   <Minus className="w-3 h-3 text-white" />
                                 ) : (
-                                  <Plus className="w-3 h-3 text-white" />
+                                  <Minus className="w-3 h-3 text-white" />
                                 )}
                               </div>
                             ) : (
@@ -858,13 +887,8 @@ export function DigitalTwinV2() {
                               {factor.name}
                             </span>
                           </div>
-                          <span
-                            className={`text-xs font-medium ${
-                              isPositive ? 'text-green-400' : 'text-red-400'
-                            }`}
-                          >
-                            {isPositive ? '' : '+'}
-                            {factor.impact.toFixed(1)}y
+                          <span className="text-xs font-medium text-slate-300">
+                            {factor.unit}
                           </span>
                         </div>
                         <p className="text-slate-400 text-xs">{factor.description}</p>
@@ -937,18 +961,18 @@ export function DigitalTwinV2() {
                         </div>
                         <div className="pt-2 border-t border-white/10">
                           <div className="flex items-center gap-2">
-                            {totalImpact < 0 ? (
+                            {yearsGained > 0 ? (
                               <TrendingDown className="w-4 h-4 text-green-400" />
                             ) : (
-                              <TrendingUp className="w-4 h-4 text-red-400" />
+                              <TrendingUp className="w-4 h-4 text-blue-400" />
                             )}
                             <span
                               className={`text-xs font-medium ${
-                                totalImpact < 0 ? 'text-green-400' : 'text-red-400'
+                                yearsGained > 0 ? 'text-green-400' : 'text-blue-400'
                               }`}
                             >
-                              {totalImpact < 0 ? '' : '+'}
-                              {totalImpact.toFixed(1)} year impact
+                              {yearsGained > 0 ? '+' : ''}
+                              {yearsGained.toFixed(1)} years
                             </span>
                           </div>
                         </div>
