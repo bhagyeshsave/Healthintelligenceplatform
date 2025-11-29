@@ -85,6 +85,7 @@ server/
 ## Related Projects
 
 - [Thryve Doctors Portal](https://github.com/bhagyeshsave/ThryveDoctorsPortal1) - Healthcare provider portal for managing patient data and consultations
+- [SOS Agent](https://github.com/sanetechies/SOS-agent) - Emergency response agent for health crisis situations
 
 ## Original Design
 
