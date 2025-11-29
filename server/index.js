@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
 
 const app = express();
 app.use(cors());
@@ -147,7 +148,6 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 // S3 file upload endpoint
-const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.post('/api/upload-to-s3', upload.single('file'), async (req, res) => {
